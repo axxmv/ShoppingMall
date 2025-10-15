@@ -12,6 +12,13 @@ class Staff(User):
         super().__init__(name, password)
         self.staffID = staffID
 
+    def addItem(self, inventory, itemId, name, description, price, stock, likeCounter):
+        inventory._addItemtoInventory(itemId, name, description, price, stock, likeCounter)
+
+    def removeItem(self, inventory, itemId):
+        inventory._removeItemfromInventory(itemId)
+
+
 class Customer(User):
     def __init__(self, name, password, address, paymentInfo, wishlistID):
         super().__init__(name, password)
@@ -52,11 +59,11 @@ class Inventory:
         return "\n".join([f" {item.name}" for item in self.inventoryList]) # "\n".join([str(item) for item in self.inventoryList]) to print details
 
 
-    def addItemtoInventory(self, itemId, name, description, price, stock, likeCounter): #creates the item and adds it to inventory at the sane time
+    def _addItemtoInventory(self, itemId, name, description, price, stock, likeCounter): #creates the item and adds it to inventory at the sane time
         item = Item(itemId, name, description, price, stock, likeCounter)
         self.inventoryList.append(item)
 
-    def removeItemfromInventory(self, itemId):
+    def _removeItemfromInventory(self, itemId):
         for item in self.inventoryList:
             if item.itemId == itemId:
                 self.inventoryList.remove(item)
@@ -65,12 +72,55 @@ class Inventory:
         print(f"No item found with ID {itemId}.")
 
 
+user_db = [
+    {"name": "bob", "password": "boblikeshotdogs", "role": "staff", "staffID": 12345},
+    {"name": "alice", "password": "alice123", "role": "customer", "address": "123 Street", "paymentInfo": "Visa 1234", "wishlistID": 1},
+    {"name": "boss", "password": "topsecret", "role": "ceo", "ceoID": 999}
+] #for registration we just need to add the user information to this list
+
+
+def login(user_db):
+    username = input("Enter your Username: ")
+    password = input("Enter your Password: ")
+
+    for data in user_db:
+        if data["name"] == username and data["password"] == password:
+            role = data["role"]
+
+            if role == "staff":
+                return Staff(data["name"], data["password"], data["staffID"])
+            elif role == "customer":
+                return Customer(data["name"], data["password"], data["address"], data["paymentInfo"], data["wishlistID"])
+            elif role == "ceo":
+                return Ceo(data["name"], data["password"], data["ceoID"])
+
 
 def main():
     inv = Inventory()
-    inv.addItemtoInventory(1234, "apple","food", 1.25, 3, 1)
-    inv.addItemtoInventory(5678, "banana", "food", 1.25, 4, 2)
-    print(inv)
+
+    ####################### just for testing
+    staff1 = Staff("bob", "boblikeshotdogs", 12345)
+    staff1.addItem(inv, 16374, "apple", "description", 2.95, 5, 0)
+    staff1.addItem(inv, 85848, "grape", "description", 3.45, 5, 2)
+    #######################
+
+    currentUser = None
+    while not currentUser:
+        currentUser = login(user_db)
+
+    print(f"\nLogged in as {currentUser.name} ({currentUser.__class__.__name__})\n")
+
+    if isinstance(currentUser, Staff):
+        print("Staff Portal")
+    elif isinstance(currentUser, Customer):
+        print("Welcome to the Shopping Mall!")
+        print("Browse Available Items: ")
+        print("\n")
+        print(inv)
+    elif isinstance(currentUser, Ceo):
+        print("View Reports")
+
+
 
 
 
