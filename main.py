@@ -1,5 +1,8 @@
 # Shopping Mall
 
+
+import random
+
 class User:
     def __init__(self, name, password):
         self.name = name
@@ -79,13 +82,58 @@ user_db = [
 ] #for registration we just need to add the user information to this list
 
 
+def register(user_db):
+    print("__________Registration__________ ")
+    username = input("Username: ")
+    password = input("Password: ")
+
+
+    print("Choose Account Type: 1. Staff  2. Customer")
+    accountType = int(input("New Account Type: "))
+
+    if accountType == 1:
+        role = "staff"
+        staff_id = input("Enter a four digit Staff ID: ")
+        newuserinfo = {"name": username, "password": password, "role": "staff", "staffID": staff_id}
+        user_db.append(newuserinfo)
+        print(user_db)
+
+        return
+
+
+    if accountType == 2:
+        role = "customer"
+        address = input("Enter Shipping Address: ")
+        paymentInfo = input("Enter Card type and number (e.g. Visa 1234 5678: ")
+        wishlistID = random.randint(100, 999) #add function to make sure the wishlist ID is unique here
+        newuserinfo = {"name": username, "password": password, "role" : role, "address": address, "paymentInfo": paymentInfo, "wishlistID": wishlistID}
+        user_db.append(newuserinfo)
+        return
+
+
+
+
+
+
+
+
+
+
+
+
+#the user inputs their desired role and it is assigned to them when it is added into the database.
+
+
 def login(user_db):
+    print("________Log In________")
     username = input("Enter your Username: ")
     password = input("Enter your Password: ")
 
     for data in user_db:
         if data["name"] == username and data["password"] == password:
             role = data["role"]
+            # add input validation. add loop for invalid credentials.
+
 
             if role == "staff":
                 return Staff(data["name"], data["password"], data["staffID"])
@@ -93,6 +141,7 @@ def login(user_db):
                 return Customer(data["name"], data["password"], data["address"], data["paymentInfo"], data["wishlistID"])
             elif role == "ceo":
                 return Ceo(data["name"], data["password"], data["ceoID"])
+
 
 
 def main():
@@ -104,9 +153,13 @@ def main():
     staff1.addItem(inv, 85848, "grape", "description", 3.45, 5, 2)
     #######################
 
+    register(user_db)
+    print("User Registered")
+
+
     currentUser = None
     while not currentUser:
-        currentUser = login(user_db)
+        currentUser = login(user_db)  ##calls the login function and the returned value is now assigned to current user
 
     print(f"\nLogged in as {currentUser.name} ({currentUser.__class__.__name__})\n")
 
