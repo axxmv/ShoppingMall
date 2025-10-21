@@ -21,6 +21,44 @@ class Staff(User):
     def removeItem(self, inventory, itemId):
         inventory._removeItemfromInventory(itemId)
 
+    def viewCustomerInformation(self):
+        print(customer_info)
+
+    def staffPortal(self, inv):
+
+        run = True
+        while run == True:
+            print("1. Add Item "
+                  "2. View Customer Information "
+                  "3. message "
+                  " 4. Exit")
+
+            option = int(input("Enter Option: "))
+
+            if option == 1:
+                name = input("Enter the Item name: ")
+                itemId = int(input("Enter the Item ID: "))
+                description = input("Item Description: ")
+                price = float(input("price: "))
+                stock = int(input("Amount in stock: "))
+                likeCounter = 0
+
+                self.addItem(inv, itemId, name, description, price, stock, likeCounter)
+            if option == 2:
+                self.viewCustomerInformation()
+
+            if option == 3:
+                print("pretend you see messages")
+
+            if option == 4:
+                run = False
+                return
+
+
+
+
+
+
 
 class Customer(User):
     def __init__(self, name, password, address, paymentInfo, wishlistID):
@@ -29,10 +67,21 @@ class Customer(User):
         self.paymentInfo = paymentInfo
         self.wishlistInfo = wishlistID
 
+    def customerPortal(self):
+        print("1. View Catalog"
+              "2. View Wishlist"
+              "3. message")
+    #
+
 class Ceo(User):
     def __init__(self, name, password, ceoID):
         super().__init__(name, password)
         self.ceoID = ceoID
+
+    def ceoPortal(self):
+        print("1. View Reports")
+
+
 
 
 class Item:
@@ -82,15 +131,18 @@ user_db = [
 ] #for registration we just need to add the user information to this list
 
 
+customer_info = [{"name": "alice", "password": "alice123", "role": "customer", "address": "123 Street", "paymentInfo": "Visa 1234", "wishlistID": 1}]
+
 def register(user_db):
     print("__________Registration__________ ")
     username = input("Username: ")
-    password = input("Password: ")
+    password = input("Password: ") #reenter password
 
 
     print("Choose Account Type: 1. Staff  2. Customer")
     accountType = int(input("New Account Type: "))
 
+##restrict staff accounts
     if accountType == 1:
         role = "staff"
         staff_id = input("Enter a four digit Staff ID: ")
@@ -108,17 +160,8 @@ def register(user_db):
         wishlistID = random.randint(100, 999) #add function to make sure the wishlist ID is unique here
         newuserinfo = {"name": username, "password": password, "role" : role, "address": address, "paymentInfo": paymentInfo, "wishlistID": wishlistID}
         user_db.append(newuserinfo)
+        customer_info.append(newuserinfo)
         return
-
-
-
-
-
-
-
-
-
-
 
 
 #the user inputs their desired role and it is assigned to them when it is added into the database.
@@ -152,9 +195,14 @@ def main():
     staff1.addItem(inv, 16374, "apple", "description", 2.95, 5, 0)
     staff1.addItem(inv, 85848, "grape", "description", 3.45, 5, 2)
     #######################
+    print("You Just got Coconut Malled")
+    condition = input("Do you have an account? Y or N: ")
 
-    register(user_db)
-    print("User Registered")
+    if condition.upper() == 'N':
+        register(user_db)
+        print("User Registered")
+
+
 
 
     currentUser = None
@@ -165,14 +213,26 @@ def main():
 
     if isinstance(currentUser, Staff):
         print("Staff Portal")
+        currentUser.staffPortal(inv)
+        condition = input("Would you like to log out? Y or N: ")
+        while condition.upper() == "N":
+            currentUser.staffPortal(inv)
+            condition = input("Would you like to log out? Y or N: ")
+        del currentUser
+        login(user_db)
+
+
+
+
     elif isinstance(currentUser, Customer):
         print("Welcome to the Shopping Mall!")
         print("Browse Available Items: ")
         print("\n")
         print(inv)
+        currentUser.customerPortal()
     elif isinstance(currentUser, Ceo):
         print("View Reports")
-
+        currentUser.ceoPortal()
 
 
 
