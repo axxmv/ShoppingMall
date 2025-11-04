@@ -273,22 +273,40 @@ def main():
 
 
 
+    max_attempts = 4 #we give them 4 chances to get their login right
+
+    attempts = 0
     currentUser = None
 
 
-    while not currentUser:
+    while not currentUser and attempts < max_attempts: # I was thinking that since this is for if they're not a current user then maybe we can have them a certain amount of failed
+        # login attempts. This is my response to the comment below about focusing here  
         currentUser = login(user_db)
 
-        if not currentUser:
-            wants_register = ask_yes_no("Would you like to register as a new user?")
-            if wants_register:
+        if currentUser:
+            break #login was successful 
+            
+            attempts += 1 
+            print("\nLogin Failed. Incorrect username or password.")
+            
+            wants_register = ask_yes_no("Register as a new user?") #this gives the user to register or not
+            if wants_register: 
                 success = register(user_db)
                 if success:
-                    print("Registration complete! You can now log in.\n")
-                else:
+                    print("\Congratulations your registration is now complete! You can now login.\n")
+                    currentUser = login(user_db)
+                    if currentUser:
+                        break 
+                else: 
                     print("Registration failed. Please try again later.\n")
-            else:
-                print("Please try logging in again.\n")
+            else: 
+                retry = ask_yes_no("Try logging in again?")
+                if not retry:
+                    print("Returning to main menu...\n")
+                    break #this will exit out the loop and return controls to main
+        else:
+            if attempts >= max_attempts:
+                print("You have had too many failed attempts. Please try again later.\n")
 
                 ## how can I write some decently well written code here focus on this for now
 
