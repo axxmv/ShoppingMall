@@ -28,10 +28,13 @@ class Staff(User):
 
         run = True
         while run == True:
-            print("1. Add Item "
-                  "2. View Customer Information "
-                  "3. message "
-                  " 4. Exit")
+            print("1. Add Item ")
+            print("\n")
+            print("2. View Customer Information ")
+            print("\n")
+            print("3. message ")
+            print("\n")
+            print("4. Exit")
 
             option = int(input("Enter Option: "))
 
@@ -67,11 +70,32 @@ class Customer(User):
         self.paymentInfo = paymentInfo
         self.wishlistInfo = wishlistID
 
-    def customerPortal(self):
-        print("1. View Catalog"
-              "2. View Wishlist"
-              "3. message")
-    #
+    def customerPortal(self, inv):
+        run = True
+        while run == True:
+            print("1. View Catalog")
+            print("\n")
+            print("2. View Wishlist")
+            print("\n")
+            print("3. message")
+            print("\n")
+            print("4. Exit")
+            print("\n")
+            option = int(input("Enter Option: "))
+
+            if option == 1:
+                print(inv)
+            if option == 2:
+                print(self.wishlistInfo)
+            if option == 3:
+                print("pretend you see messages")
+            if option == 4:
+                run = False
+                return
+
+
+
+
 
 class Ceo(User):
     def __init__(self, name, password, ceoID):
@@ -80,6 +104,7 @@ class Ceo(User):
 
     def ceoPortal(self):
         print("1. View Reports")
+
 
 
 
@@ -144,13 +169,22 @@ def register(user_db):
 
 ##restrict staff accounts
     if accountType == 1:
-        role = "staff"
-        staff_id = input("Enter a four digit Staff ID: ")
-        newuserinfo = {"name": username, "password": password, "role": "staff", "staffID": staff_id}
-        user_db.append(newuserinfo)
-        print(user_db)
+        code = input("Enter Staff Account Code: ")
+        STAFF_REGISTRATION_CODE = "2467"
+        if code == STAFF_REGISTRATION_CODE:
+            role = "staff"
+            staff_id = input("Enter a four digit Staff ID: ")
+            newuserinfo = {"name": username, "password": password, "role": "staff", "staffID": staff_id}
+            user_db.append(newuserinfo)
+            print(user_db)
 
-        return
+        else:
+            print("Could Not create Staff Account")
+            return False
+
+
+
+        return True
 
 
     if accountType == 2:
@@ -161,10 +195,20 @@ def register(user_db):
         newuserinfo = {"name": username, "password": password, "role" : role, "address": address, "paymentInfo": paymentInfo, "wishlistID": wishlistID}
         user_db.append(newuserinfo)
         customer_info.append(newuserinfo)
-        return
+        return True
 
 
 #the user inputs their desired role and it is assigned to them when it is added into the database.
+
+def ask_yes_no(prompt):
+    #Ask the user a Y/N question and return True for Yes, False for No.
+    choice = input(prompt + " (Y/N): ").strip().upper()
+    while choice not in ['Y', 'N']:
+        choice = input("Invalid input. Please enter Y or N: ").strip().upper()
+    return choice == 'Y'
+
+
+
 
 
 def login(user_db):
@@ -186,6 +230,11 @@ def login(user_db):
                 return Ceo(data["name"], data["password"], data["ceoID"])
 
 
+        print("User not found")
+        return None
+
+
+
 
 def main():
     inv = Inventory()
@@ -194,20 +243,57 @@ def main():
     staff1 = Staff("bob", "boblikeshotdogs", 12345)
     staff1.addItem(inv, 16374, "apple", "description", 2.95, 5, 0)
     staff1.addItem(inv, 85848, "grape", "description", 3.45, 5, 2)
+    staff1.addItem(inv, 78493, "cranberry", "description", 5.97, 6, 4)
+    staff1.addItem(inv, 45672, "oranges", "description", 3.26, 4, 5)
+    staff1.addItem(inv, 34567, "watermelon", "description", 4.25, 3, 5)
     #######################
-    print("You Just got Coconut Malled")
-    condition = input("Do you have an account? Y or N: ")
 
-    if condition.upper() == 'N':
-        register(user_db)
-        print("User Registered")
 
+    while True:
+        print("Welcome to the Shopping Mall")
+        print("_____________________________")
+        print("\n")
+        has_account = ask_yes_no("Do you have an account?")
+
+        if has_account:
+            break  # Go to log in later
+
+        # Otherwise, try to register
+        success = register(user_db)
+
+        if success:
+            print("User Registered")
+            break  # User registered successfully, go to login
+        else:
+            print("Registration failed")
+            try_again = ask_yes_no("Try registering again?")
+            if not try_again:
+                # Go back to the top, re-ask "Do you have an account?"
+                continue
 
 
 
     currentUser = None
+
+
     while not currentUser:
-        currentUser = login(user_db)  ##calls the login function and the returned value is now assigned to current user
+        currentUser = login(user_db)
+
+        if not currentUser:
+            wants_register = ask_yes_no("Would you like to register as a new user?")
+            if wants_register:
+                success = register(user_db)
+                if success:
+                    print("Registration complete! You can now log in.\n")
+                else:
+                    print("Registration failed. Please try again later.\n")
+            else:
+                print("Please try logging in again.\n")
+
+                ## how can I write some decently well written code here focus on this for now
+
+
+        ##calls the login function and the returned value is now assigned to current user
 
     print(f"\nLogged in as {currentUser.name} ({currentUser.__class__.__name__})\n")
 
@@ -215,6 +301,8 @@ def main():
         print("Staff Portal")
         currentUser.staffPortal(inv)
         condition = input("Would you like to log out? Y or N: ")
+
+
         while condition.upper() == "N":
             currentUser.staffPortal(inv)
             condition = input("Would you like to log out? Y or N: ")
@@ -226,10 +314,9 @@ def main():
 
     elif isinstance(currentUser, Customer):
         print("Welcome to the Shopping Mall!")
-        print("Browse Available Items: ")
         print("\n")
-        print(inv)
-        currentUser.customerPortal()
+        currentUser.customerPortal(inv)
+        x = input("Would you like to log out? Y or N: ")
     elif isinstance(currentUser, Ceo):
         print("View Reports")
         currentUser.ceoPortal()
