@@ -156,7 +156,11 @@ user_db = [
 ] #for registration we just need to add the user information to this list
 
 
-customer_info = [{"name": "alice", "password": "alice123", "role": "customer", "address": "123 Street", "paymentInfo": "Visa 1234", "wishlistID": 1}]
+customer_info = [
+    {"name": "alice", "password": "alice123", "role": "customer", "address": "123 Street", "paymentInfo": "Visa 1234", "wishlistID": 1},
+    {"name": "Timmy", "password": "5678", "role": "customer", "address": "78 street", "paymentInfo": "visa 6789", "wishlistID": 34}
+
+                 ]
 
 def register(user_db):
     print("__________Registration__________ ")
@@ -230,8 +234,8 @@ def login(user_db):
                 return Ceo(data["name"], data["password"], data["ceoID"])
 
 
-        print("User not found")
-        return None
+
+
 
 
 
@@ -271,47 +275,41 @@ def main():
                 # Go back to the top, re-ask "Do you have an account?"
                 continue
 
-
-
-    max_attempts = 4 #we give them 4 chances to get their login right
-
+    max_attempts = 4
     attempts = 0
     currentUser = None
 
-
-    while not currentUser and attempts < max_attempts: # I was thinking that since this is for if they're not a current user then maybe we can have them a certain amount of failed
-        # login attempts. This is my response to the comment below about focusing here  
+    while not currentUser and attempts < max_attempts:
         currentUser = login(user_db)
 
         if currentUser:
-            break #login was successful 
-            
-            attempts += 1 
-            print("\nLogin Failed. Incorrect username or password.")
-            
-            wants_register = ask_yes_no("Register as a new user?") #this gives the user to register or not
-            if wants_register: 
-                success = register(user_db)
-                if success:
-                    print("\Congratulations your registration is now complete! You can now login.\n")
-                    currentUser = login(user_db)
-                    if currentUser:
-                        break 
-                else: 
-                    print("Registration failed. Please try again later.\n")
-            else: 
-                retry = ask_yes_no("Try logging in again?")
-                if not retry:
-                    print("Returning to main menu...\n")
-                    break #this will exit out the loop and return controls to main
+            break  # login was successful
+
+        attempts += 1
+        print("\nLogin Failed. Incorrect username or password.")
+
+        if attempts >= max_attempts:
+            print("You have had too many failed attempts. Please try again later.\n")
+            break
+
+        wants_register = ask_yes_no("Register as a new user?")  # give the user the option to register
+        if wants_register:
+            success = register(user_db)
+            if success:
+                print("Congratulations, your registration is now complete! You can now login.\n")
+                currentUser = login(user_db)
+                if currentUser:
+                    break
+            else:
+                print("Registration failed. Please try again later.\n")
         else:
-            if attempts >= max_attempts:
-                print("You have had too many failed attempts. Please try again later.\n")
+            retry = ask_yes_no("Try logging in again?")
+            if not retry:
+                print("Returning to main menu...\n")
+                break  # exit the loop and return control to main
 
-                ## how can I write some decently well written code here focus on this for now
+################
 
-
-        ##calls the login function and the returned value is now assigned to current user
 
     print(f"\nLogged in as {currentUser.name} ({currentUser.__class__.__name__})\n")
 
