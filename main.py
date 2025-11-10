@@ -171,7 +171,7 @@ def register(user_db):
     print("Choose Account Type: 1. Staff  2. Customer")
     accountType = int(input("New Account Type: "))
 
-##restrict staff accounts
+
     if accountType == 1:
         code = input("Enter Staff Account Code: ")
         STAFF_REGISTRATION_CODE = "2467"
@@ -241,16 +241,16 @@ def login(user_db):
 
 
 def main():
+
     inv = Inventory()
 
-    ####################### just for testing
+    # test inventory setup (unchanged)
     staff1 = Staff("bob", "boblikeshotdogs", 12345)
     staff1.addItem(inv, 16374, "apple", "description", 2.95, 5, 0)
     staff1.addItem(inv, 85848, "grape", "description", 3.45, 5, 2)
     staff1.addItem(inv, 78493, "cranberry", "description", 5.97, 6, 4)
     staff1.addItem(inv, 45672, "oranges", "description", 3.26, 4, 5)
     staff1.addItem(inv, 34567, "watermelon", "description", 4.25, 3, 5)
-    #######################
 
 
     while True:
@@ -260,58 +260,94 @@ def main():
         has_account = ask_yes_no("Do you have an account?")
 
         if has_account:
-            break  # Go to log in later
-
-        # Otherwise, try to register
-        success = register(user_db)
-
-        if success:
-            print("User Registered")
-            break  # User registered successfully, go to login
+            pass  #skips to login below
         else:
-            print("Registration failed")
-            try_again = ask_yes_no("Try registering again?")
-            if not try_again:
-                # Go back to the top, re-ask "Do you have an account?"
-                continue
-
-    max_attempts = 4
-    attempts = 0
-    currentUser = None
-
-    while not currentUser and attempts < max_attempts:
-        currentUser = login(user_db)
-
-        if currentUser:
-            break  # login was successful
-
-        attempts += 1
-        print("\nLogin Failed. Incorrect username or password.")
-
-        if attempts >= max_attempts:
-            print("You have had too many failed attempts. Please try again later.\n")
-            break
-
-        wants_register = ask_yes_no("Register as a new user?")  # give the user the option to register
-        if wants_register:
             success = register(user_db)
             if success:
-                print("Congratulations, your registration is now complete! You can now login.\n")
-                currentUser = login(user_db)
-                if currentUser:
-                    break
+                print("User Registered")
             else:
-                print("Registration failed. Please try again later.\n")
-        else:
-            retry = ask_yes_no("Try logging in again?")
-            if not retry:
-                print("Returning to main menu...\n")
-                break  # exit the loop and return control to main
-
-################
+                print("Registration failed")
+                try_again = ask_yes_no("Try registering again?")
+                # if false it'll restart main menu
+                if not try_again:
+                    continue
 
 
-    print(f"\nLogged in as {currentUser.name} ({currentUser.__class__.__name__})\n")
+        max_attempts = 4
+        attempts = 0
+        currentUser = None
+
+        while not currentUser and attempts < max_attempts: #currentUser not always defined?
+            currentUser = login(user_db)
+
+            if currentUser:
+                break  #exit loop if there is a currentUser
+
+            attempts += 1
+            print("\nLogin Failed. Incorrect username or password.")
+
+            if attempts >= max_attempts:
+                print("too many failed attempts\n")
+                break
+
+            wants_register = ask_yes_no("Register as a new user?")
+
+            if wants_register:
+                success = register(user_db)
+                if success:
+                    print("registration is now complete\n")
+                    currentUser = login(user_db)
+                    if currentUser:
+                        break
+                else:
+                    print("Registration failed. Please try again later.\n")
+            else:
+                retry = ask_yes_no("Try logging in again?")
+                if not retry:
+                    print("Returning to main menu...\n")
+                    break #exit login loop
+
+
+            if not currentUser:
+                continue  #if there isnt a currentUser just return to the top
+
+
+
+
+            print(f"\nLogged in as {currentUser.name} ({currentUser.__class__.__name__})\n") #this will happen if a currentUser is recognized
+
+            if isinstance(currentUser, Staff):
+                print("Staff Portal")
+                currentUser.staffPortal(inv)
+                condition = input("Would you like to log out? Y or N: ")
+
+                while condition.upper() == "N":
+                    currentUser.staffPortal(inv)
+                    condition = input("Would you like to log out? Y or N: ")
+                del currentUser
+
+            elif isinstance(currentUser, Customer):
+                print("Welcome to the Shopping Mall!")
+                print("\n")
+                currentUser.customerPortal(inv)
+                x = input("Would you like to log out? Y or N: ")
+
+            elif isinstance(currentUser, Ceo):
+                print("View Reports")
+                currentUser.ceoPortal()
+
+
+            back_to_menu = ask_yes_no("Return to main menu?") #ask if logged out user wnats to go back to main menu
+            if not back_to_menu:
+                print("Goodbye!")
+                break  #exit outer loop
+################ :/ idk yall but ill fix it.
+
+
+    if currentUser:
+        print(f"\nLogged in as {currentUser.name} ({currentUser.__class__.__name__})\n")
+
+
 
     if isinstance(currentUser, Staff):
         print("Staff Portal")
