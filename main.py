@@ -316,31 +316,31 @@ def main():
 
             print(f"\nLogged in as {currentUser.name} ({currentUser.__class__.__name__})\n") #this will happen if a currentUser is recognized
 
-            if isinstance(currentUser, Staff):
-                print("Staff Portal")
+        if isinstance(currentUser, Staff):
+            print("Staff Portal")
+            currentUser.staffPortal(inv)
+            condition = input("Would you like to log out? Y or N: ")
+
+            while condition.upper() == "N":
                 currentUser.staffPortal(inv)
                 condition = input("Would you like to log out? Y or N: ")
+            del currentUser
 
-                while condition.upper() == "N":
-                    currentUser.staffPortal(inv)
-                    condition = input("Would you like to log out? Y or N: ")
-                del currentUser
+        elif isinstance(currentUser, Customer):
+            print("Welcome to the Shopping Mall!")
+            print("\n")
+            currentUser.customerPortal(inv)
+            x = input("Would you like to log out? Y or N: ")
 
-            elif isinstance(currentUser, Customer):
-                print("Welcome to the Shopping Mall!")
-                print("\n")
-                currentUser.customerPortal(inv)
-                x = input("Would you like to log out? Y or N: ")
-
-            elif isinstance(currentUser, Ceo):
-                print("View Reports")
-                currentUser.ceoPortal()
+        elif isinstance(currentUser, Ceo):
+            print("View Reports")
+            currentUser.ceoPortal()
 
 
-            back_to_menu = ask_yes_no("Return to main menu?") #ask if logged out user wnats to go back to main menu
-            if not back_to_menu:
-                print("Goodbye!")
-                break  #exit outer loop
+        back_to_menu = ask_yes_no("Return to main menu?") #ask if logged out user wnats to go back to main menu
+        if not back_to_menu:
+            print("Goodbye!")
+            break  #exit outer loop
 ################ :/ idk yall but ill fix it.
 
 
