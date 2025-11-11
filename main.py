@@ -103,7 +103,18 @@ class Ceo(User):
         self.ceoID = ceoID
 
     def ceoPortal(self):
-        print("1. View Reports")
+        run = True
+        while run == True:
+            print("1. View Reports")
+            print("\n")
+            print("2. Exit")
+
+            choice = int(input("Enter choice: "))
+            if choice == 1:
+                print("pretend you see reports")
+            if choice == 2:
+                run = False
+                return
 
 
 
@@ -325,6 +336,7 @@ def main():
                 currentUser.staffPortal(inv)
                 condition = input("Would you like to log out? Y or N: ")
             del currentUser
+            continue
 
         elif isinstance(currentUser, Customer):
             print("Welcome to the Shopping Mall!")
@@ -332,9 +344,24 @@ def main():
             currentUser.customerPortal(inv)
             x = input("Would you like to log out? Y or N: ")
 
+            while x.upper() == "N":
+                currentUser.customerPortal(inv)
+                x = input("Would you like to log out? Y or N: ")
+            del currentUser
+            continue
+
+
         elif isinstance(currentUser, Ceo):
             print("View Reports")
             currentUser.ceoPortal()
+            y = input("Would you like to log out? Y or N: ")
+
+            while y.upper() == "N":
+                currentUser.ceoPortal()
+                y = input("Would you like to log out? Y or N: ")
+            del currentUser
+            continue
+
 
 
         back_to_menu = ask_yes_no("Return to main menu?") #ask if logged out user wnats to go back to main menu
@@ -359,7 +386,7 @@ def main():
             currentUser.staffPortal(inv)
             condition = input("Would you like to log out? Y or N: ")
         del currentUser
-        login(user_db)
+
 
 
 
