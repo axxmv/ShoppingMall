@@ -63,35 +63,79 @@ class Staff(User):
 
 
 
-class Customer(User):
+class Customer(User): #Vincent was here from lines 66-138
     def __init__(self, name, password, address, paymentInfo, wishlistID):
         super().__init__(name, password)
         self.address = address
         self.paymentInfo = paymentInfo
-        self.wishlistInfo = wishlistID
+        self.wishlistInfo = [] #changed from ID to wishlist ID
 
+    #I'm adding this for the browsing and interacting with items part (Vincent)
+    def browseItems(self, inv):
+        if not inv.inventoryList:
+            print("There are no items available in inventory.")
+            return
+        
+        print("\n===== Available Items =====")
+        for item in inv.inventoryList:
+            print(f"{item.itemId}: {item.name} - ${item.price:.2f}")
+        
+        while True:
+            try:
+                choice = input(\nEnter Item ID to view details (or 'b' to go back): ")
+                if choice.lower() == 'b':
+                    return
+                itemId = int(choice)
+                selected_item = next((i for i in inv.inventoryList if i.itemId == itemId), None)
+                if not selected_item:
+                    print("Item not found. Please try again.")
+                    continue
+                
+                print("\n" + str(selected_item))
+                action = input("Would you like to (L)ike, (W)ishlist, or (B)ack? ").lower()
+                
+                if action == '1':
+                    selected_item.likeCounter += 1
+                    print(f"You liked {selected_item.name}! Total Likes: {selected_item.likeCounter}")
+                
+                elif action == 'b':
+                    return
+                else:
+                    print("Invalid choice.")
+            except ValueError:
+                print("Please enter a valid item ID or 'b' to go back.")
+
+    #Creating view wishlist
+    def viewWishlist(self):
+        if not self.wishlistInfo:
+            print("Your wishlist is empty.")
+        else:
+            print("\n===== Your Wishlist =====")
+            for item in self.wishlistInfo:
+                print(f"- {item.name} (${item.price:.2f})")
+    
+    #I decided to update the customerportal -Vincent
     def customerPortal(self, inv):
         run = True
         while run == True:
-            print("1. View Catalog")
-            print("\n")
+            print("\n=== Customer Portal ===")
+            print("1. Browse Catalog")
             print("2. View Wishlist")
-            print("\n")
-            print("3. message")
-            print("\n")
+            print("3. Message (placeholder)")
             print("4. Exit")
-            print("\n")
+           
             option = int(input("Enter Option: "))
 
-            if option == 1:
-                print(inv)
-            if option == 2:
-                print(self.wishlistInfo)
-            if option == 3:
+            if option == "1":
+                self.broseItems(inv)
+            elif option == 2:
+                self.viewWishlist()
+            elif option == 3:
                 print("pretend you see messages")
-            if option == 4:
+            elif option == 4:
                 run = False
-                return
+            else: 
+                print(Invalid option. Please try again.")
 
 
 
