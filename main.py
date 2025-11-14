@@ -102,7 +102,7 @@ class Customer(User): #Vincent was here from lines 66-138
                     continue
                 
                 print("\n" + str(selected_item))
-                action = input("Would you like to (L)ike, (W)ishlist, (O)rder, or (B)ack? ").lower() #added order here -Vincent
+                action = input("Would you like to (L)ike, (W)ishlist, or (B)ack? ").lower() #added order here -Vincent
                 
                 if action == 'l':
                     selected_item.likeCounter += 1
@@ -115,8 +115,8 @@ class Customer(User): #Vincent was here from lines 66-138
                     else:
                         print("This item is already in your wishlist.")
                 
-                elif action == 'o':
-                    self.placeorder(selected_item)
+                #elif action == 'o':
+                    #self.placeorder(selected_item)
                 
                 elif action == 'b':
                     return
@@ -137,6 +137,8 @@ class Customer(User): #Vincent was here from lines 66-138
     #Here is where I put in the order functions - Vincent
     def placeorder(self, item):
         """Stores a simple order record in the customer's orderHistory"""
+        #i think this part should be inside of checkout and not inside of the browse items page.
+        #i tried the code earlier and it lets you "order" a single item but you never go through checkout or anything.
         order_record = {
             "item": item.name,
             "status": "Processing" 
