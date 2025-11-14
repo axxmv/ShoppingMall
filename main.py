@@ -142,7 +142,19 @@ class Customer(User): #Vincent was here from lines 66-138
             print("\n===== Your Orders =====")
             for order in self.orderHistory:
                 print(f"Item: {order['item']} | Status: {order['status']}")
-    
+
+    def checkout(self, wishlistInfo):
+        print("=========Checkout==========")
+        for e in wishlistInfo:
+            print(f"- {e.name} (${e.price:.2f})")
+
+        con = ask_yes_no("Proceed to checkout with these items?: ")
+        if con:
+            print("=========Receipt=========")
+            print("success! Order Placed")
+            print("Order Completed With Card Payment: ")
+            print(self.paymentInfo)
+
     #I decided to update the customerportal -Vincent
     def customerPortal(self, inv):
         run = True
@@ -152,7 +164,8 @@ class Customer(User): #Vincent was here from lines 66-138
             print("2. View Wishlist")
             print("3. View Order Status") #Just added this -Vincent
             print("4. Message (placeholder)")
-            print("5. Exit")
+            print("5. checkout")
+            print("6. Exit")
            
             option = int(input("Enter Option: "))
 
@@ -164,7 +177,16 @@ class Customer(User): #Vincent was here from lines 66-138
                 self.vieworderStatus()
             elif option == 4:
                 print("pretend you see messages")
+
             elif option == 5:
+                q = ask_yes_no("Proceed to Checkout?: ")
+                if not q:
+                    run = True
+                    continue
+                if q:
+                    self.checkout(self.wishlistInfo)
+
+            elif option == 6:
                 run = False
             else: 
                 print("Invalid option. Please try again.")
