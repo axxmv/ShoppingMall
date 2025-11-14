@@ -24,17 +24,24 @@ class Staff(User):
     def viewCustomerInformation(self):
         print(customer_info)
 
+    def updateCustomerOrderStatus(self, customer, item_name, new_status):
+        for order in customer.orderHistory:
+            if order["item"] == item_name:
+                order["status"] = new_status
+                print(f"Updated {customer.name}'s order for {item_name} to {new_status}")
+                return
+        print("Order not found.")
+
     def staffPortal(self, inv):
 
         run = True
         while run == True:
+            print("\n=== Staff Portal ===")
             print("1. Add Item ")
-            print("\n")
             print("2. View Customer Information ")
-            print("\n")
             print("3. message ")
-            print("\n")
-            print("4. Exit")
+            print("4. Update Order Status")
+            print("5. Exit")
 
             option = int(input("Enter Option: "))
 
@@ -54,6 +61,8 @@ class Staff(User):
                 print("pretend you see messages")
 
             if option == 4:
+                print("==View Order Status")
+            if option == 5:
                 run = False
                 return
 
@@ -150,10 +159,15 @@ class Customer(User): #Vincent was here from lines 66-138
 
         con = ask_yes_no("Proceed to checkout with these items?: ")
         if con:
-            print("=========Receipt=========")
-            print("success! Order Placed")
-            print("Order Completed With Card Payment: ")
-            print(self.paymentInfo)
+            self.paymentInfo = input("Enter Card type and number (e.g. Visa 1234 5678:) ")
+
+            while self.paymentInfo:
+                print("=========Receipt=========")
+                print("success! Order Placed")
+                print("Order Completed With Card Payment: ", self.paymentInfo)
+                input("press any key to continue: ")
+                return
+
 
     #I decided to update the customerportal -Vincent
     def customerPortal(self, inv):
@@ -303,7 +317,7 @@ def register(user_db):
     if accountType == 2:
         role = "customer"
         address = input("Enter Shipping Address: ")
-        paymentInfo = input("Enter Card type and number (e.g. Visa 1234 5678:) ") #added missing parentheses here -Vincent
+        paymentInfo = "" #added missing parentheses here -Vincent
         wishlistID = random.randint(100, 999) #add function to make sure the wishlist ID is unique here
         newuserinfo = {"name": username, "password": password, "role" : role, "address": address, "paymentInfo": paymentInfo, "wishlistID": wishlistID}
         user_db.append(newuserinfo)
@@ -369,7 +383,7 @@ def main():
         has_account = ask_yes_no("Do you have an account?")
 
         if has_account:
-            pass  #skips to login below
+            pass  #skips to login
         else:
             success = register(user_db)
             if success:
