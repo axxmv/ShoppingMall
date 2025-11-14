@@ -69,6 +69,7 @@ class Customer(User): #Vincent was here from lines 66-138
         self.address = address
         self.paymentInfo = paymentInfo
         self.wishlistInfo = [] #changed from ID to wishlist ID
+        self.orderHistory = [] #this is new I added this to track orders -Vincent
 
     #I'm adding this for the browsing and interacting with items part (Vincent)
     def browseItems(self, inv):
@@ -82,7 +83,7 @@ class Customer(User): #Vincent was here from lines 66-138
         
         while True:
             try:
-                choice = input(\nEnter Item ID to view details (or 'b' to go back): ")
+                choice = input("\nEnter Item ID to view details (or 'b' to go back): ")
                 if choice.lower() == 'b':
                     return
                 itemId = int(choice)
@@ -92,11 +93,21 @@ class Customer(User): #Vincent was here from lines 66-138
                     continue
                 
                 print("\n" + str(selected_item))
-                action = input("Would you like to (L)ike, (W)ishlist, or (B)ack? ").lower()
+                action = input("Would you like to (L)ike, (W)ishlist, (O)rder, or (B)ack? ").lower() #added order here -Vincent
                 
-                if action == '1':
+                if action == 'l':
                     selected_item.likeCounter += 1
                     print(f"You liked {selected_item.name}! Total Likes: {selected_item.likeCounter}")
+                
+                elif action == 'w': #new stuff -Vincent
+                    if selected_item not in self.wishlistInfo:
+                        self.wishlistInfo.append(selected_item)
+                        print(f"{selected_item.name} added to your wishlist!")
+                    else:
+                        print("This item is already in your wishlist.")
+                
+                elif action == 'o':
+                    self.placeorder(selected_item)
                 
                 elif action == 'b':
                     return
@@ -114,6 +125,24 @@ class Customer(User): #Vincent was here from lines 66-138
             for item in self.wishlistInfo:
                 print(f"- {item.name} (${item.price:.2f})")
     
+    #Here is where I put in the order functions - Vincent
+    def placeorder(self, item):
+        """Stores a simple order record in the customer's orderHistory"""
+        order_record = {
+            "item": item.name,
+            "status": "Processing" 
+        }
+        self.orderHistory.append(order_record)
+        print(f"\nOrder placed for {item.name}! Status: processing")
+    
+    def vieworderStatus(self):
+        if not self.orderHistory:
+            print("You have no orders yet.")
+        else:
+            print("\n===== Your Orders =====")
+            for order in self.orderHistory:
+                print(f"Item: {order['item']} | Status: {order['status']}")
+    
     #I decided to update the customerportal -Vincent
     def customerPortal(self, inv):
         run = True
@@ -121,21 +150,24 @@ class Customer(User): #Vincent was here from lines 66-138
             print("\n=== Customer Portal ===")
             print("1. Browse Catalog")
             print("2. View Wishlist")
-            print("3. Message (placeholder)")
-            print("4. Exit")
+            print("3. View Order Status") #Just added this -Vincent
+            print("4. Message (placeholder)")
+            print("5. Exit")
            
             option = int(input("Enter Option: "))
 
-            if option == "1":
-                self.broseItems(inv)
+            if option == 1:
+                self.browseItems(inv)
             elif option == 2:
                 self.viewWishlist()
             elif option == 3:
-                print("pretend you see messages")
+                self.vieworderStatus()
             elif option == 4:
+                print("pretend you see messages")
+            elif option == 5:
                 run = False
             else: 
-                print(Invalid option. Please try again.")
+                print("Invalid option. Please try again.")
 
 
 
@@ -249,7 +281,7 @@ def register(user_db):
     if accountType == 2:
         role = "customer"
         address = input("Enter Shipping Address: ")
-        paymentInfo = input("Enter Card type and number (e.g. Visa 1234 5678: ")
+        paymentInfo = input("Enter Card type and number (e.g. Visa 1234 5678:) ") #added missing parentheses here -Vincent
         wishlistID = random.randint(100, 999) #add function to make sure the wishlist ID is unique here
         newuserinfo = {"name": username, "password": password, "role" : role, "address": address, "paymentInfo": paymentInfo, "wishlistID": wishlistID}
         user_db.append(newuserinfo)
