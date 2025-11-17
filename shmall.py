@@ -1,5 +1,5 @@
 # Shopping Mall
-from datetime import datetime
+import datetime
 import time
 import os
 import subprocess
@@ -349,7 +349,7 @@ class Staff(User):
             print("7. Messages ")
             print("8. Exit")
 
-            option = int(input("Enter Option: "))
+            option = int(input("\nEnter Option: "))
 
             if option == 1:
                 show_inventory()
@@ -1088,7 +1088,7 @@ def main():
                 retry = ask_yes_no("Try logging in again?")
                 if not retry:
                     print("Returning to main menu...\n")
-                    break #exit login loop"""
+                    break #exit login loop
 
 
             if not currentUser:
@@ -1100,7 +1100,7 @@ def main():
             # print(f"\nLogged in as {currentUser.name} ({currentUser.__class__.__name__})\n") #this will happen if a currentUser is recognized
 
         if isinstance(currentUser, Staff):
-            print("Staff Portal")
+            print("\nStaff Portal")
             currentUser.staffPortal(inv)
             condition = input("Would you like to log out? Y or N: ")
 
@@ -1139,40 +1139,6 @@ def main():
         if not back_to_menu:
             print("Goodbye!")
             break  #exit outer loop
-################ :/ idk yall but ill fix it.
-
-
-    #if currentUser:
-        #print(f"\nLogged in as {currentUser.name} ({currentUser.__class__.__name__})\n")
-
-
-
-    if isinstance(currentUser, Staff):
-        print("Staff Portal")
-        currentUser.staffPortal(inv)
-        condition = input("Would you like to log out? Y or N: ")
-
-
-        while condition.upper() == "N":
-            currentUser.staffPortal(inv)
-            condition = input("Would you like to log out? Y or N: ")
-        del currentUser
-
-
-
-
-
-    elif isinstance(currentUser, Customer):
-        print("Welcome to the Shopping Mall!")
-        print("\n")
-        currentUser.customerPortal(inv)
-        x = input("Would you like to log out? Y or N: ")
-    elif isinstance(currentUser, Ceo):
-        print("View Reports")
-        currentUser.ceoPortal()
-
-
-
 
 
 if __name__ == "__main__":
