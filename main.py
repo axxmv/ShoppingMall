@@ -134,17 +134,7 @@ class Customer(User): #Vincent was here from lines 66-138
             for item in self.wishlistInfo:
                 print(f"- {item.name} (${item.price:.2f})")
     
-    #Here is where I put in the order functions - Vincent
-    def placeorder(self, item):
-        """Stores a simple order record in the customer's orderHistory"""
-        #i think this part should be inside of checkout and not inside of the browse items page.
-        #i tried the code earlier and it lets you "order" a single item but you never go through checkout or anything.
-        order_record = {
-            "item": item.name,
-            "status": "Processing" 
-        }
-        self.orderHistory.append(order_record)
-        print(f"\nOrder placed for {item.name}! Status: processing")
+   
     
     def vieworderStatus(self):
         if not self.orderHistory:
@@ -154,21 +144,45 @@ class Customer(User): #Vincent was here from lines 66-138
             for order in self.orderHistory:
                 print(f"Item: {order['item']} | Status: {order['status']}")
 
-    def checkout(self, wishlistInfo):
-        print("=========Checkout==========")
-        for e in wishlistInfo:
-            print(f"- {e.name} (${e.price:.2f})")
-
-        con = ask_yes_no("Proceed to checkout with these items?: ")
-        if con:
-            self.paymentInfo = input("Enter Card type and number (e.g. Visa 1234 5678:) ")
-
-            while self.paymentInfo:
-                print("=========Receipt=========")
-                print("success! Order Placed")
-                print("Order Completed With Card Payment: ", self.paymentInfo)
-                input("press any key to continue: ")
-                return
+    def checkout(self, wishlistInfo):#moving the stuff i had for order to checkout also deleted the old placeorder stuff -Vincent
+        if not wishlistInfo:
+            print("Your Wishlist is empty. Add items before checking out.")
+            return
+        
+        print("========= Checkout =========")
+        total = 0
+        for item in wishlistInfo:
+            print(f"- {item.name} (${item.price:.2f})")
+            total += item.price
+        
+        print(f"\nTotal: ${total:.2f}")
+        
+        confirm = ask_yes_no("Proceed to checkout with these items?")
+        if not confirm:
+            print("Checkout cancelled.")
+            return
+        
+        #This is for getting the payment - Vincent
+        self.paymentInfo = input("Enter Card type and number (e.g. Visa 1234 5678): ")
+        
+        print("\n========= Receipt =========")
+        print("Payment Successful!")
+        print(f"Paid with {self.paymentInfo}")
+        print("Order placed for the following items:")
+        
+        #This is where order is created -V
+        for item in wishlistInfo:
+            order_record = {
+                "item": item.name,
+                "status": "Processing"
+            }
+            self.orderHistory.append(order_record)
+            print(f"- {item.name} (Processing)")
+        
+        #This should clear the wishlist after purchase - V
+        wishlistInfo.clear()
+        
+        input("Press Enter to continue.")
 
 
     #I decided to update the customerportal -Vincent
