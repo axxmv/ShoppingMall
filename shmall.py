@@ -1,5 +1,9 @@
 # Shopping Mall
-
+from datetime import datetime
+import time
+import os
+import subprocess
+import platform
 import mysql.connector as mysql
 import random
 mydb=mysql.connect(host='localhost',user='root',passwd='MeghP169')
@@ -61,6 +65,7 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS orders (
   total_amount  DECIMAL(10,2) NOT NULL,
   status        ENUM('processing','paid','shipped','delivered','cancelled') NOT NULL DEFAULT 'paid',
   created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  shipping      VARCHAR(64) DEFAULT "Shipped",
   CONSTRAINT fk_order_user FOREIGN KEY (user_id)
     REFERENCES users(id) ON DELETE CASCADE
 )""")
@@ -83,14 +88,20 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS payments (
   CONSTRAINT fk_payment_order FOREIGN KEY (order_id)
     REFERENCES orders(id) ON DELETE CASCADE
 )""")
+
 cursor.execute("""CREATE TABLE IF NOT EXISTS reports (
-  id           BIGINT PRIMARY KEY AUTO_INCREMENT,
-  report_type  ENUM('daily','monthly') NOT NULL,
-  period_start DATE NOT NULL,
-  period_end   DATE NOT NULL,
-  file_ref     VARCHAR(255) NOT NULL,
-  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-)""")
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    report_type VARCHAR(20),
+    file_path VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);""")
+#cursor.execute("""CREATE TABLE IF NOT EXISTS reports (
+#  report_type  ENUM('daily','monthly') NOT NULL,
+#  period_start DATE NOT NULL,
+#  period_end   DATE NOT NULL,
+#  file_ref     VARCHAR(255) NOT NULL,
+#  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+#)""")##
 
 
 #For random but Uniqe user ids
@@ -125,6 +136,71 @@ def seed_items_if_empty():
         print(f"Seeded {cursor.rowcount} starter items.")
     finally:
         pass
+
+
+
+
+def validate_card_details(card_number, exp_date, cvv, card_type):
+    """
+    Simple local validation for card number, expiry and CVV.
+    This does NOT contact any real payment gateway.
+    """
+
+    # Normalize
+    card_number = card_number.replace(" ", "")
+    card_type = card_type.lower().strip()
+
+    # 1) Card number basic checks
+    if not card_number.isdigit():
+        print("Card number must contain digits only.")
+        return False
+
+    if len(card_number) < 13 or len(card_number) > 19:
+        print("Card number length is invalid.")
+        return False
+
+    # Very basic type hint (optional)
+    if card_type == "credit" or card_type == "debit":
+        # Example: you can enforce Visa starts with 4, MasterCard 5, etc.
+        # For now we just accept any prefix to keep it simple.
+        pass
+
+    # 2) Expiry date: expected format mm/yyyy
+    try:
+        parts = exp_date.split("/")
+        if len(parts) != 2:
+            print("Expiry must be in MM/YYYY format.")
+            return False
+
+        month = int(parts[0])
+        year = int(parts[1])
+
+        if month < 1 or month > 12:
+            print("Expiry month must be between 1 and 12.")
+            return False
+
+        # We consider expiry at end of the month
+        now = datetime.now()
+        # card expired if year < current year or same year but month < current month
+        if year < now.year or (year == now.year and month < now.month):
+            print("Card is expired.")
+            return False
+    except ValueError:
+        print("Invalid expiry format.")
+        return False
+
+    # 3) CVV basic check
+    if not cvv.isdigit():
+        print("CVV must contain digits only.")
+        return False
+
+    if len(cvv) not in (3, 4):
+        print("CVV must be 3 or 4 digits.")
+        return False
+
+    # Passed all simple checks
+    return True
+
 
 #Shows current Inventory   
 def show_inventory():
@@ -192,23 +268,93 @@ class Staff(User):
         sql= "UPDATE items SET stock=%s WHERE id=%s;"
         cursor.execute(sql,(addon,itemId))
         mydb.commit()
+
+    def viewcustomerinfo(self):
+        key = input("Enter customer username or email: ").strip()
+        cursor.execute("SELECT id, username, email FROM users WHERE role='customer' AND (username=%s OR email=%s);", (key, key))
+        user = cursor.fetchone()
+        if not user:
+            print("No customer found.")
+            return
+        _id,name,email=user
+        print(f"\nCustomer: {name} ({email})")
+        cursor.execute("SELECT id, total_amount, status, created_at, shipping FROM orders WHERE user_id=%s ORDER BY created_at DESC;", (_id,))
+        orders = cursor.fetchall()
+        print("\nOrders:")
+        if not orders:
+            print("  (none)")
+        else:
+            for o in orders:
+                id_, amt, status,created_at, shp = o
+                print(f"  Order #{id_} | ${float(amt):.2f} | {status} | {created_at} | {shp}")
+        cursor.execute("""
+            SELECT i.id, i.name, i.price FROM wishlists w
+            JOIN items i ON i.id=w.item_id
+            WHERE w.user_id=%s ORDER BY i.name;
+        """, (_id,))
+        wl = cursor.fetchall()
+        print("\nWishlist:")
+        if not wl:
+            print("  (empty)")
+        else:
+            for it in wl:
+                print(f"  {it['id']} | {it['name']} | ${float(it['price']):.2f}")
+
+                
+    def staff_message(self):
+        cursor.execute("""
+            SELECT m.id, u.username AS from_user, m.message, m.created_at
+            FROM messages m JOIN users u ON u.id=m.customer_id
+            AND m.status='unread' ORDER BY m.created_at ASC;
+            """)
+        msgs = cursor.fetchall()
+
+        if not msgs:
+            print("\nNo new messages.")
+            return
+
+        print("\nUnread messages:")
+        for m in msgs:
+            _id,user,body,created_at=m
+            print(f"#{_id} from {user} at {created_at}\n{body}\n---")
+
+        answer = ask_yes_no("Want to reply any message")
+        while answer:
+            
+            mid = int(input("Enter message ID to reply: ").strip())
+            reply = input("Reply: ").strip()
+            cursor.execute("SELECT customer_id FROM messages WHERE id=%s ;", (mid,))
+            orig = cursor.fetchone()
+            cus_id=orig
+            if not orig:
+                print("Message not found or not addressed to you.")
+                return
+            
+            cursor.execute("UPDATE messages SET status='read',reply=%s,replied_at = NOW() WHERE id=%s;", (reply,mid))
+            mydb.commit()
+            print("Reply sent & original marked read.")
+            answer = ask_yes_no("Want to reply any message")
                 
 
     def staffPortal(self, inv):
 
         run = True
         while run == True:
-            print("1. Add Item ")
-            print("2. Remove Item")
-            print("3. Modify Item")
-            print("4. Refill Inventory")
-            print("5. View Customer Information ")
-            print("6. message ")
-            print("7. Exit")
+            print("1. View Inventory")
+            print("2. Add Item ")
+            print("3. Remove Item")
+            print("4. Modify Item")
+            print("5. Refill Inventory")
+            print("6. View Customer Information ")
+            print("7. Messages ")
+            print("8. Exit")
 
             option = int(input("Enter Option: "))
 
             if option == 1:
+                show_inventory()
+
+            if option == 2:
                 name = input("Enter the Item name: ")
                 itemId = int(input("Enter the Item ID: "))
                 description = input("Item Description: ")
@@ -219,28 +365,28 @@ class Staff(User):
                 self._addItemtoInventory(itemId, name, description, price, stock, likeCounter)
                 show_inventory()
                 
-            if option == 2:
+            if option == 3:
                 itemId = int(input("Enter the Item ID: "))
                 self._removeItemfromInventory(itemId )
                 show_inventory()
 
-            if option == 3:
+            if option == 4:
                 itemId = int(input("Enter the Item ID: "))
                 self._modifyIteminInventory(itemId)
                 
                 
-            if option == 4:
+            if option == 5:
                 itemId = int(input("Enter the Item ID to update stocks: "))
                 num= int(input("Enter the number of items to be added to stocks: "))#need to run a loop that stays on untill refilling is completed
                 self._refillInventory(itemId,num)
                 
-            if option ==5:
-                continue
+            if option ==6:
+                self.viewcustomerinfo()
             
-            if option == 6:
-                continue
-                
             if option == 7:
+                self.staff_message()
+                
+            if option == 8:
                 run = False
                 return
 
@@ -279,7 +425,7 @@ class Customer(User):
         
         while True:
             try:
-                choice = input("Enter Item ID to view details (or 'B' to go back): ")
+                choice = input("\nEnter Item ID to view details (or 'B' to go back):")
                 if choice.lower() == 'b':
                     return
                 itemId = int(choice)
@@ -288,14 +434,14 @@ class Customer(User):
                 
                 if not info:
                     print("Item not found. Please try again.")
-                    try_again = ask_yes_no("Try entering id again ?")
+                    try_again = ask_yes_no("\nTry entering id again ?")
                     if not try_again:
                         return
                 else:
                     id_, name, desc, price, stock, like_count = info
-                    print(f"ID: {id_}, Name: {name}, Description: {desc or 'N/A'}")
+                    print(f"\nID: {id_}, Name: {name}, Description: {desc or 'N/A'}")
                     print(f"Price: ${price}, Stock: {stock}, Likes: {like_count} ")
-                    action = input("Would you like to (L)ike, Add to (W)ishlist, or Go (B)ack? ")
+                    action = input("\nWould you like to (L)ike, Add to (W)ishlist, or Go (B)ack? ")
                     if action == 'L':
                         cursor.execute("UPDATE items SET like_count = like_count + 1 WHERE id=%s;", (id_,))
                         mydb.commit()
@@ -304,22 +450,74 @@ class Customer(User):
                     elif action == 'W':
                         self. add_wishlist(id_)
                         #need to add double adding of wishlist to
-                        """if selected_item not in self.wishlistInfo: 
-                            self.wishlistInfo.append(selected_item)
-                            print(f"{selected_item.name} added to your wishlist!")
-                        else:
-                            print("This item is already in your wishlist.")"""
                 
-                    elif action == 'b':
+                    elif action == 'B':
                         return
                     else:
                         print("Invalid choice.")
             except ValueError:
                     print("Please enter a valid item ID or 'b' to go back.")
                 
+    def print_receipt(self, order_id, lines, total, payment_type, last4):
+        """
+        Print a simple text receipt to the console after checkout.
+        lines = list of (item_id, qty, price)
+        total = final total (with tax if you used tax)
+        """
+        print("\nThank You for Shopping with Us. ")
+        print("Your Order was successfully placed!")
+        print("Order confirmation and receipt was sent to your email.")
+        print("")
+        print("\n========= RECEIPT =========")
+        print(f"Order ID: {order_id}")
+        print(f"Customer: {self.name} (ID: {self.user_id})")
+        print(f"Email: {self.email}")
+        print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"Payment: {payment_type.title()} card ending with {last4}")
+        print("----------------------------")
 
+        subtotal = 0.0
+
+        for item_id, qty, price in lines:
+            qty = int(qty)
+            price = float(price)
+            line_total = qty * price
+            subtotal += line_total
+
+            # fetch item name
+            cursor.execute("SELECT name FROM items WHERE id=%s;", (item_id,))
+            row = cursor.fetchone()
+            if row:
+                item_name = row[0]
+            else:
+                item_name = f"Item {item_id}"
+
+            print(f"{item_name} x{qty} @ ${price:.2f} = ${line_total:.2f}")
+
+        print("----------------------------")
+        print(f"Subtotal: ${subtotal:.2f}")
+
+        # If your total already includes tax, you can compute tax like this:
+        tax = float(total) - subtotal
+        if tax < 0:
+            tax = 0.0
+        print(f"Tax:      ${tax:.2f}")
+        print(f"TOTAL:    ${float(total):.2f}")
+        print("============================\n")
+
+    
     def initiateCheckout(self,total,lines):
+        
         print("=========Checkout==========")
+        
+        tax=10/100 # can change tax from here
+        tax_amount=float(total)*(tax)
+        total_tax= float(total)+ tax_amount
+        
+        print(f"Total amount: {total}")
+        print(f"Tax: {tax_amount}")
+        print(f"Total after Tax= {total_tax} ")
+
         ptype = input("Pay by (credit/debit): ").strip().lower()
         if ptype not in ("credit", "debit"):
             print("Invalid payment type.")
@@ -328,24 +526,28 @@ class Customer(User):
         exp_date= input("Enter expiration month and year (mm/yyyy): ")
         cvv= input ("Enter CVV : ")
         last4 = card[-4:] if len(card) >= 4 else "0000"
+        if validate_card_details(card,exp_date,cvv,ptype):
+            cursor.execute("INSERT INTO orders (user_id, total_amount, status) VALUES (%s,%s,'paid');", (self.user_id, total_tax))
+            oid = cursor.lastrowid
+            for item_id, qty, price in lines:
+                cursor.execute("INSERT INTO order_items (order_id, item_id, quantity, price) VALUES (%s,%s,%s,%s);", (oid, item_id, qty, price))
+                cursor.execute("UPDATE items SET stock = stock - %s WHERE id=%s;", (qty, item_id))
 
-        cursor.execute("INSERT INTO orders (user_id, total_amount, status) VALUES (%s,%s,'paid');", (self.user_id, total))
-        oid = cursor.lastrowid
-        for item_id, qty, price in lines:
-            cursor.execute("INSERT INTO order_items (order_id, item_id, quantity, price) VALUES (%s,%s,%s,%s);", (oid, item_id, qty, price))
+            cursor.execute("INSERT INTO payments (order_id, card_type, last4, status) VALUES (%s,%s,%s,'captured');",
+                        (oid, ptype, last4))
+            cursor.execute("DELETE FROM wishlists WHERE user_id=%s;", (self.user_id,))
             mydb.commit()
-            cursor.execute("UPDATE items SET stock = stock - %s WHERE id=%s;", (qty, item_id))
-            mydb.commit()
+            self.print_receipt(oid, lines, total_tax, ptype, last4)
+            
 
-        cursor.execute("INSERT INTO payments (order_id, card_type, last4, status) VALUES (%s,%s,%s,'captured');",
-                 (oid, ptype, last4))
-        mydb.commit()
-        cursor.execute("DELETE FROM wishlists WHERE user_id=%s;", (self.user_id,))
-        mydb.commit()
+        
 
-        print("=========Receipt=========")
-        print("success! Order Placed")
-        print("Order Completed With Card Payment: ")
+    def remove_wishlist(self):
+        item_id = int(input("Enter item ID to remove from wishlist: ").strip())
+        cursor.execute("DELETE FROM wishlists WHERE user_id=%s AND item_id=%s;", (self.user_id, item_id))
+        mydb.commit()
+        print("Removed from wishlist.")
+
         
 
     #Creating view wishlist
@@ -366,45 +568,23 @@ class Customer(User):
             total+=(price*quan)
             lines.append((_id, quan, price))
         print("-" * 40)
-
-        
-        tax=10/100 # can change tac from here
-        tax_amount=float(total)*(tax)
-        total_tax= float(total)+ tax_amount
-        print(f"Total amount: {total}")
-        print(f"Tax: {tax_amount}")
-        print(f"Total after Tax= {total_tax} ")
-        option=input("Want to initiate (C)heckout or go (B)ack: ")
-        if option == "C":
-            self.initiateCheckout(total_tax,lines)
-        elif option =="B":
-            return
-        else:
-            print("Invalid Option.")
-
-
-        
+        option = ""
+        while option!="B":
+            option=input("Want to initiate (C)heckout , (R)emove an item from wishlist or go (B)ack: ")
+            if option == "C":
+                if self.initiateCheckout(total,lines):
+                    self.print_receipt(order_id, lines, total, payment_type, last4)
                 
-    #Here is where I put in the order functions - Vincent
-    def placeorder(self, item):
-        """Stores a simple order record in the customer's orderHistory"""
-        order_record = {
-            "item": item.name,
-            "status": "Processing" 
-        }
-        self.orderHistory.append(order_record)
-        print(f"\nOrder placed for {item.name}! Status: processing")
-    
-    def vieworderStatus(self):
-        if not self.orderHistory:
-            print("You have no orders yet.")
-        else:
-            print("\n===== Your Orders =====")
-            for order in self.orderHistory:
-                print(f"Item: {order['item']} | Status: {order['status']}")
+                return
+            elif option == "R":
+                self.remove_wishlist()
+            else:
+                print("Invalid Option.")
+
+
                 
     def ask_for_help(self):
-        """Customer sends a help message to staff."""
+        #Customer sends a help message to staff.
         msg = input("\nEnter your message for staff: ").strip()
         if not msg:
             print("Message cannot be empty.")
@@ -415,11 +595,12 @@ class Customer(User):
         mydb.commit()
 
         print("✅ Your message has been sent. A staff member will reply soon.")
+        
     
     def view_my_messages(self):
-        """Customer views all their messages and replies."""
+        #Customer views all their messages and replies.
         sql = """
-            SELECT id, message, reply, status FROM messages
+            SELECT id, message, reply, status,created_at,replied_at FROM messages
             WHERE customer_id = %s
             ORDER BY created_at DESC;
         """
@@ -439,20 +620,36 @@ class Customer(User):
             print(f"Message: {msg}")
             if rep:
                 print(f"Reply at {replied_at}: {rep}")
+            
             else:
                 print("Reply: (no reply yet)")
             print("-" * 40)
+
             
-        
-    #I decided to update the customerportal -Vincent
+    def view_order_status(self):
+        oid = int(input("Enter your Order ID: ").strip())
+        cursor.execute("SELECT id, user_id, status, created_at, total_amount,shipping  FROM orders WHERE id=%s; ", (oid,))
+        o = cursor.fetchone()
+        _id, uid, status, created_at, amt, shp = o
+        if not o:
+            print("Order not found.")
+            return
+        if int(uid) != int(self.user_id):
+            print("You can only view your own orders.")
+            return
+
+        print(f"\nOrder #{_id} | Status: {status} | Total: ${float(amt):.2f} | Placed: {created_at} | Tracking info: {shp}")
+
+            
     def customerPortal(self, inv):
         run = True
         while run == True:
             print("\n=== Customer Portal ===")
             print("1. Browse Catalog")
             print("2. View Wishlist")
-            print("3. HelpDesk")
-            print("4. Exit")
+            print("3. View Order Status")
+            print("4. HelpDesk")
+            print("5. Exit")
            
             option = int(input("Enter Option: "))
 
@@ -461,12 +658,15 @@ class Customer(User):
             elif option == 2:
                 self.viewWishlist()
             elif option == 3:
-                print("\n=== Help Desk ===")
-                print("1. Message Staff")
-                print("2. View my messages")
-                print("3. Back")
-                option_2 = int(input("Enter Option: "))
+                self.view_order_status()
+            elif option == 4:
+                option_2=0
                 while option_2 != 3:
+                    print("\n=== Help Desk ===")
+                    print("1. Message Staff")
+                    print("2. View my messages")
+                    print("3. Back")
+                    option_2 = int(input("Enter Option: "))
                     if option_2 == 1:
                         self.ask_for_help()
                     elif option_2 == 2:
@@ -474,7 +674,7 @@ class Customer(User):
                     else:
                         print("Invalid option. Please try again.")
                 
-            elif option == 4:
+            elif option == 5:
                 run = False
             else: 
                 print("Invalid option. Please try again.")
@@ -484,21 +684,203 @@ class Customer(User):
 
 
 class Ceo(User):
-    #def __init__(self, name, password, ceoID):
-    #   super().__init__(name, password)
-    #  self.ceoID = ceoID
+    def __init__(self, name, ceoID):
+        super().__init__(name)
+        self.ceoID = ceoID
 
+
+    def generate_daily_report(self):
+        today = datetime.date.today()
+        date_str = today.strftime("%Y-%m-%d")
+
+        # Fetch daily orders & sales
+        sql = """
+            SELECT i.name, SUM(oi.quantity) AS qty, SUM(oi.price * oi.quantity)
+            FROM orders o
+            JOIN order_items oi ON o.id = oi.order_id
+            JOIN items i ON i.id = oi.item_id
+            WHERE DATE(o.created_at) = %s
+            GROUP BY i.name;
+        """
+        cursor.execute(sql, (today,))
+        rows = cursor.fetchall()
+
+        # Prepare content
+        report_text = f"====== DAILY REPORT ({date_str}) ======\n\n"
+        if not rows:
+            report_text += "No sales today.\n"
+        else:
+            total_sales =0
+            for r in rows:
+                name,qty,amount=r
+                amount = float(amount)
+                total_sales += amount
+                report_text += f"{name} | Qty: {qty} | Sales: ${amount:.2f}\n"
+    
+            report_text += f"\nTOTAL SALES: ${total_sales:.2f}\n"
+
+        # Save file
+        file_name = f"daily_report_{date_str}.txt"
+        file_path = os.path.join("reports", file_name)
+
+        os.makedirs("reports", exist_ok=True)
+
+        with open(file_path, "w") as f:
+            f.write(report_text)
+
+        # Save to database
+        cursor.execute("INSERT INTO reports (report_type, file_path) VALUES (%s,%s)",
+                       ("daily", file_path))
+        mydb.commit()
+
+        print(f"\nDaily report generated: {file_path}")
+
+        
+    def generate_monthly_report(self):
+        year = int(input("Enter year (YYYY): "))
+        month = int(input("Enter month (1–12): "))
+
+        start_date = datetime.date(year, month, 1)
+        if month == 12:
+            end_date = datetime.date(year + 1, 1, 1)
+        else:
+            end_date = datetime.date(year, month + 1, 1)
+
+        sql = """
+            SELECT i.name, SUM(oi.quantity) AS qty, SUM(oi.price * oi.quantity)
+            FROM orders o
+            JOIN order_items oi ON o.id = oi.order_id
+            JOIN items i ON i.id = oi.item_id
+            WHERE o.created_at >= %s AND o.created_at < %s
+            GROUP BY i.name;
+        """
+        cursor.execute(sql, (start_date, end_date))
+        rows = cursor.fetchall()
+
+        report_text = f"====== MONTHLY REPORT ({year}-{month:02d}) ======\n\n"
+
+        if not rows:
+            report_text += "No sales recorded.\n"
+        else:
+            total_sales = 0
+            for r in rows:
+                name, qty, amount = r
+                amount = float(amount)
+                total_sales += amount
+                report_text += f"{name} | Qty: {qty} | Sales: ${amount:.2f}\n"
+
+            report_text += f"\nTOTAL SALES: ${total_sales:.2f}\n"
+
+        file_name = f"monthly_report_{year}_{month:02d}.txt"
+        file_path = os.path.join("reports", file_name)
+
+        os.makedirs("reports", exist_ok=True)
+
+        with open(file_path, "w") as f:
+            f.write(report_text)
+
+        cursor.execute("INSERT INTO reports (report_type, file_path) VALUES (%s,%s)",
+                   ("monthly", file_path))
+        mydb.commit()
+
+        print(f"\nMonthly report generated: {file_path}")
+
+
+
+
+    def run_report_scheduler():
+        print("Report scheduler started. Will run daily/monthly reports at 21:00 (9 PM).")
+        last_daily_run = None          # store last date daily ran
+        last_monthly_run = None        # store (year, month) of last monthly run
+
+        while True:
+            now = datetime.now()
+            today = now.date()
+
+            # Check if it's 9:00 PM (21:00)
+            if now.hour == 21 and now.minute == 0:
+                # ---- DAILY REPORT ----
+                if last_daily_run != today:
+                    print(f"[{now}] Running DAILY report for {today}...")
+                    generate_daily_report_for_date(today)
+                    last_daily_run = today
+
+                # ---- MONTHLY REPORT ----
+                month_key = (today.year, today.month)
+                if last_monthly_run != month_key:
+                    print(f"[{now}] Running MONTHLY report for {today.year}-{today.month:02d}...")
+                    generate_monthly_report_for(today.year, today.month)
+                    last_monthly_run = month_key
+
+                # Sleep a bit so we don’t run multiple times within the same minute
+                time.sleep(60)
+
+            # Check every 30 seconds
+            time.sleep(30)
+
+    def view_reports(self):
+        cursor.execute("SELECT id, report_type, file_path, created_at FROM reports ORDER BY created_at DESC")
+        rows = cursor.fetchall()
+
+        if not rows:
+            print("\nNo reports found.")
+            return
+
+        print("\n=== Reports List ===\n")
+        for r in rows:
+            rid, rtype, path, created = r
+            print(f"[{rid}] {rtype.upper()} | Created: {created} | File: {path}")
+
+        choice = input("\nEnter report ID to view (or 0 to go back): ")
+
+        if not choice.isdigit() or int(choice) == 0:
+            return
+
+        report_id = int(choice)
+
+        cursor.execute("SELECT file_path FROM reports WHERE id=%s", (report_id,))
+        rp = cursor.fetchone()
+
+        if not rp:
+            print("Invalid report ID.")
+            return
+
+        file_path = rp[0]
+
+        if not os.path.exists(file_path):
+            print("Report file not found.")
+            return
+
+        print(f"\nOpening: {file_path}")
+    
+        # Open file cross-platform
+        if platform.system() == "Darwin":       # macOS
+            subprocess.call(["open", file_path])
+        elif platform.system() == "Windows":
+            os.startfile(file_path)             # Windows only
+        else:                                   # Linux
+            subprocess.call(["xdg-open", file_path])
+    
+    
     def ceoPortal(self):
         run = True
         while run == True:
-            print("1. View Reports")
-            print("\n")
-            print("2. Exit")
+            print("\n1. Generate Daily Reports")
+            print("2. Generate Monthly Reports")
+            print("3. View Daily Report")
+            print("4. View Monthly Report")
+            print("5. Exit")
 
             choice = int(input("Enter choice: "))
             if choice == 1:
-                print("pretend you see reports")
+                self.generate_daily_report()
             if choice == 2:
+                self.generate_monthly_report()
+            if choice == 3:
+                self.view_reports()
+            if choice == 4:
+                continue
+            if choice == 5:
                 run = False
                 return
 
@@ -644,7 +1026,7 @@ def login():
             elif role == "customer":
                 return Customer(name, user_id, email)
             else:
-                return Ceo()
+                return Ceo(name,user_id)
 
 
 
@@ -659,7 +1041,7 @@ def main():
         print("_____________________________")
         print("\n")
         has_account = ask_yes_no("Do you have an account?")
-
+        print("\n")
         if has_account:
             pass  #skips to login below
         else:
@@ -719,7 +1101,6 @@ def main():
 
         if isinstance(currentUser, Staff):
             print("Staff Portal")
-            show_inventory()
             currentUser.staffPortal(inv)
             condition = input("Would you like to log out? Y or N: ")
 
@@ -730,7 +1111,6 @@ def main():
             continue
 
         elif isinstance(currentUser, Customer):
-            print("Welcome to the Shopping Mall!")
             print("\n")
             currentUser.customerPortal(inv)
             x = input("Would you like to log out? Y or N: ")
@@ -797,3 +1177,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
