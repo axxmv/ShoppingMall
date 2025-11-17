@@ -95,13 +95,33 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS reports (
     file_path VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );""")
-#cursor.execute("""CREATE TABLE IF NOT EXISTS reports (
-#  report_type  ENUM('daily','monthly') NOT NULL,
-#  period_start DATE NOT NULL,
-#  period_end   DATE NOT NULL,
-#  file_ref     VARCHAR(255) NOT NULL,
-#  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-#)""")##
+
+
+def add_default_ceo_if_missing():
+    # Check if CEO already exists
+    cursor.execute("SELECT COUNT(*) FROM users WHERE role='ceo';")
+    count = cursor.fetchone()[0]
+
+    if count == 0:
+
+        # Default credentials (you can change them)
+        ceo_id= 7989
+        ceo_username = "admin_ceo"
+        ceo_name= "Mr Troy"
+        ceo_email = "ceo@shoppingmall.com"
+        ceo_password = "ceo1234"       # store plain or hashed depending on your system
+        ceo_role = "ceo"
+
+        # Insert CEO
+        cursor.execute("""
+            INSERT INTO users (id,username,name, email, password_hash, role)
+            VALUES (%s, %s, %s, %s,%s,%s);
+        """, (ceo_id,ceo_username,ceo_name, ceo_email, ceo_password, ceo_role))
+
+        mydb.commit()
+    else:
+        pass
+
 
 
 #For random but Uniqe user ids
@@ -886,71 +906,6 @@ class Ceo(User):
 
 
 
-
-
-class Item:
-    def __init__(self, itemId, name, description, price, stock, likeCounter):
-
-        self.itemId = itemId
-        self.name = name
-        self.description = description
-        self.price = price
-        self.stock = stock
-        self.likeCounter = likeCounter
-
-    def __str__(self): #to view item details. used when "viewing" an item
-        return (f"Item ID: {self.itemId}\n"
-                f"Name: {self.name}\n"
-                f"Description: {self.description}\n"
-                f"Price: ${self.price:.2f}\n"
-                f"Stock: {self.stock}\n"
-                f"Likes: {self.likeCounter}\n")
-    
-
-    
-
-class Inventory:
-    
-    seed_items_if_empty()
-    
-    
-    def __str__(self):
-        if not self.inventoryList:
-            return "Inventory is empty."
-        return "\n".join([f" {item.name}" for item in self.inventoryList]) # "\n".join([str(item) for item in self.inventoryList]) to print details
-
-
-    def _addItemtoInventory(self, itemId, name, description, price, stock, likeCounter): #creates the item and adds it to inventory at the sane time
-        sql = "INSERT INTO items (id,name, description, price, stock, like_count) VALUES (%s, %s, %s, %s,%s,%s);"
-        cursor.execute(sql,(itemId,name,description,price,stock,likeCounter))
-        mydb.commit()
-
-    def _removeItemfromInventory(self, itemId):
-        cursor.execute("DELETE FROM items WHERE id=%s;", (itemId,))
-        mydb.commit()
-        print('item deleted')
-
-    def _modifyIteminInventory(self, itemId):
-        cursor.execute("SELECT * FROM items WHERE id=%s;", (itemId,))
-        info= cursor.fetchone()
-        id_, name, desc, price, stock, like_count = info
-        print("Original iItem Info")
-        print(f"ID: {id_}, Name: {name}, Description: {desc or 'N/A'}")
-        print(f"Price: ${price}, Stock: {stock}, Likes: {like_count} ")
-        print("** N to keep the original ** ")
-        name_new= input("Enter the new Name : ")
-        desc_new= input("Enter the new description : ")
-        price_new= float(input("Enter New Price : "))
-        sql = "UPDATE items SET name=%s, description=%s, price=%s WHERE id=%s;"
-        cursor.execute(sql,(name_new, desc_new, price_new, id_))
-        mydb.commit()
-                
-        
-
-
-
-                 
-
 def register():
     print("__________Registration__________ ")
     username = input("Username: ")
@@ -985,7 +940,6 @@ def register():
         return True
 
 
-#the user inputs their desired role and it is assigned to them when it is added into the database.
 
 def ask_yes_no(prompt):
     #Ask the user a Y/N question and return True for Yes, False for No.
@@ -1033,7 +987,7 @@ def login():
 
 def main():
 
-    inv = Inventory()
+    add_default_ceo_if_missing()
 
 
     while True:
@@ -1060,7 +1014,7 @@ def main():
         attempts = 0
         currentUser = None
 
-        while not currentUser and attempts < max_attempts: #currentUser not always defined?
+        while not currentUser and attempts < max_attempts: 
             currentUser = login()
 
             if currentUser:
@@ -1095,9 +1049,6 @@ def main():
                 continue  #if there isnt a currentUser just return to the top
 
 
-
-
-            # print(f"\nLogged in as {currentUser.name} ({currentUser.__class__.__name__})\n") #this will happen if a currentUser is recognized
 
         if isinstance(currentUser, Staff):
             print("\nStaff Portal")
