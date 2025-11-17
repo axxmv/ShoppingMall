@@ -115,7 +115,7 @@ def add_default_ceo_if_missing():
         # Insert CEO
         cursor.execute("""
             INSERT INTO users (id,username,name, email, password_hash, role)
-            VALUES (%s, %s, %s, %s,%s,%s);
+            VALUES (%s, %s, %s, %s,%s);
         """, (ceo_id,ceo_username,ceo_name, ceo_email, ceo_password, ceo_role))
 
         mydb.commit()
@@ -905,6 +905,49 @@ class Ceo(User):
                 return
 
 
+    
+
+class Inventory:
+    
+    seed_items_if_empty()
+    
+    
+    def __str__(self):
+        if not self.inventoryList:
+            return "Inventory is empty."
+        return "\n".join([f" {item.name}" for item in self.inventoryList]) # "\n".join([str(item) for item in self.inventoryList]) to print details
+
+
+    def _addItemtoInventory(self, itemId, name, description, price, stock, likeCounter): #creates the item and adds it to inventory at the sane time
+        sql = "INSERT INTO items (id,name, description, price, stock, like_count) VALUES (%s, %s, %s, %s,%s,%s);"
+        cursor.execute(sql,(itemId,name,description,price,stock,likeCounter))
+        mydb.commit()
+
+    def _removeItemfromInventory(self, itemId):
+        cursor.execute("DELETE FROM items WHERE id=%s;", (itemId,))
+        mydb.commit()
+        print('item deleted')
+
+    def _modifyIteminInventory(self, itemId):
+        cursor.execute("SELECT * FROM items WHERE id=%s;", (itemId,))
+        info= cursor.fetchone()
+        id_, name, desc, price, stock, like_count = info
+        print("Original iItem Info")
+        print(f"ID: {id_}, Name: {name}, Description: {desc or 'N/A'}")
+        print(f"Price: ${price}, Stock: {stock}, Likes: {like_count} ")
+        print("** N to keep the original ** ")
+        name_new= input("Enter the new Name : ")
+        desc_new= input("Enter the new description : ")
+        price_new= float(input("Enter New Price : "))
+        sql = "UPDATE items SET name=%s, description=%s, price=%s WHERE id=%s;"
+        cursor.execute(sql,(name_new, desc_new, price_new, id_))
+        mydb.commit()
+                
+        
+
+
+
+                 
 
 def register():
     print("__________Registration__________ ")
@@ -940,6 +983,7 @@ def register():
         return True
 
 
+#the user inputs their desired role and it is assigned to them when it is added into the database.
 
 def ask_yes_no(prompt):
     #Ask the user a Y/N question and return True for Yes, False for No.
@@ -986,7 +1030,7 @@ def login():
 
 
 def main():
-
+    inv=Inventory()
     add_default_ceo_if_missing()
 
 
@@ -1014,7 +1058,7 @@ def main():
         attempts = 0
         currentUser = None
 
-        while not currentUser and attempts < max_attempts: 
+        while not currentUser and attempts < max_attempts: #currentUser not always defined?
             currentUser = login()
 
             if currentUser:
@@ -1049,6 +1093,9 @@ def main():
                 continue  #if there isnt a currentUser just return to the top
 
 
+
+
+            # print(f"\nLogged in as {currentUser.name} ({currentUser.__class__.__name__})\n") #this will happen if a currentUser is recognized
 
         if isinstance(currentUser, Staff):
             print("\nStaff Portal")
