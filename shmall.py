@@ -6,7 +6,7 @@ import subprocess
 import platform
 import mysql.connector as mysql
 import random
-mydb=mysql.connect(host='localhost',user='root',passwd='MeghP169')
+mydb=mysql.connect(host='localhost',user='root',passwd='Gothmikasa88')
 cursor=mydb.cursor()
 
 
@@ -462,16 +462,16 @@ class Customer(User):
                     print(f"\nID: {id_}, Name: {name}, Description: {desc or 'N/A'}")
                     print(f"Price: ${price}, Stock: {stock}, Likes: {like_count} ")
                     action = input("\nWould you like to (L)ike, Add to (W)ishlist, or Go (B)ack? ")
-                    if action == 'L':
+                    if action.upper() == 'L':
                         cursor.execute("UPDATE items SET like_count = like_count + 1 WHERE id=%s;", (id_,))
                         mydb.commit()
                         print(f"You Liked {name}")
                         
-                    elif action == 'W':
+                    elif action.upper() == 'W':
                         self. add_wishlist(id_)
                         #need to add double adding of wishlist to
                 
-                    elif action == 'B':
+                    elif action.upper() == 'B':
                         return
                     else:
                         print("Invalid choice.")
@@ -546,7 +546,7 @@ class Customer(User):
         exp_date= input("Enter expiration month and year (mm/yyyy): ")
         cvv= input ("Enter CVV : ")
         last4 = card[-4:] if len(card) >= 4 else "0000"
-        if validate_card_details(card,exp_date,cvv,ptype):
+        if validate_card_details(card,exp_date,cvv,ptype): #validate_card_details
             cursor.execute("INSERT INTO orders (user_id, total_amount, status) VALUES (%s,%s,'paid');", (self.user_id, total_tax))
             oid = cursor.lastrowid
             for item_id, qty, price in lines:
@@ -589,15 +589,18 @@ class Customer(User):
             lines.append((_id, quan, price))
         print("-" * 40)
         option = ""
-        while option!="B":
+        while option.upper() !="B":
             option=input("Want to initiate (C)heckout , (R)emove an item from wishlist or go (B)ack: ")
-            if option == "C":
+            if option.upper() == "C":
                 if self.initiateCheckout(total,lines):
                     self.print_receipt(order_id, lines, total, payment_type, last4)
                 
                 return
-            elif option == "R":
+            elif option.upper() == "R":
                 self.remove_wishlist()
+
+            elif option.upper()== "B":
+                return
             else:
                 print("Invalid Option.")
 
