@@ -115,7 +115,7 @@ def add_default_ceo_if_missing():
         # Insert CEO
         cursor.execute("""
             INSERT INTO users (id,username,name, email, password_hash, role)
-            VALUES (%s, %s, %s, %s,%s);
+            VALUES (%s, %s, %s, %s,%s,%s);
         """, (ceo_id,ceo_username,ceo_name, ceo_email, ceo_password, ceo_role))
 
         mydb.commit()
@@ -675,6 +675,8 @@ class Customer(User):
             print("5. Exit")
            
             option = int(input("Enter Option: "))
+            #input validation user must input integer datatype
+
 
             if option == 1:
                 self.browseItems(inv )
