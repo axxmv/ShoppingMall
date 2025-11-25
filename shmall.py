@@ -200,7 +200,7 @@ def validate_card_details(card_number, exp_date, cvv, card_type):
             return False
 
         # We consider expiry at end of the month
-        now = datetime.now()
+        now = datetime.datetime.now()
         # card expired if year < current year or same year but month < current month
         if year < now.year or (year == now.year and month < now.month):
             print("Card is expired.")
@@ -492,7 +492,7 @@ class Customer(User):
         print(f"Order ID: {order_id}")
         print(f"Customer: {self.name} (ID: {self.user_id})")
         print(f"Email: {self.email}")
-        print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"Payment: {payment_type.title()} card ending with {last4}")
         print("----------------------------")
 
@@ -566,7 +566,9 @@ class Customer(User):
         item_id = int(input("Enter item ID to remove from wishlist: ").strip())
         cursor.execute("DELETE FROM wishlists WHERE user_id=%s AND item_id=%s;", (self.user_id, item_id))
         mydb.commit()
+        #add condition
         print("Removed from wishlist.")
+
 
         
 
@@ -673,9 +675,12 @@ class Customer(User):
             print("3. View Order Status")
             print("4. HelpDesk")
             print("5. Exit")
-           
-            option = int(input("Enter Option: "))
-            #input validation user must input integer datatype
+
+            try:
+                option = int(input("Enter Option: "))
+            except ValueError:
+                print("Invalid input. Please enter a number from 1–5.")
+                continue  # restart menu
 
 
             if option == 1:
@@ -955,18 +960,36 @@ class Inventory:
                  
 
 def register():
+
     print("__________Registration__________ ")
+    ###########################################
+
+
+
+
+
+
     username = input("Username: ")
     name= input("Name: ")
     email= input("Email: ")
     password = input("Password: ") #reenter password
 
     print("Choose Account Type: 1. Staff  2. Customer")
-    accountType = int(input("New Account Type: "))
+    accountType = input("New Account Type: ")
+
+    while not accountType.isdigit():
+        print("Choose Account Type: 1. Staff  2. Customer")
+        accountType = input("New Account Type: ")
+
+    accountType = int(accountType)
+
 
 
     if accountType == 1:
         code = input("Enter Staff Account Code: ")
+        while not code:
+            print("Code cannot be empty.")
+            code = input("Enter Staff Account Code: ").strip()
         STAFF_REGISTRATION_CODE = "2467"
         if code == STAFF_REGISTRATION_CODE:
             role = "staff"
@@ -986,6 +1009,10 @@ def register():
         cursor.execute("INSERT INTO users values('{}','{}','{}','{}','{}','{}') ".format(customer_id,username,name,email,password,role))
         mydb.commit()
         return True
+
+    else:
+        print("Invalid Input. Please enter 1 or 2: ")
+
 
 
 #the user inputs their desired role and it is assigned to them when it is added into the database.
