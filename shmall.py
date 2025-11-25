@@ -652,9 +652,18 @@ class Customer(User):
 
             
     def view_order_status(self):
-        oid = int(input("Enter your Order ID: ").strip())
+        oid = input("Enter your Order ID: ").strip()
+        while not oid.isdigit():
+            oid = input("Enter your Order ID: ").strip()
+
+        int(oid)
         cursor.execute("SELECT id, user_id, status, created_at, total_amount,shipping  FROM orders WHERE id=%s; ", (oid,))
         o = cursor.fetchone()
+#######
+        if o is None:
+            print("Order not found.")
+            return
+####### go back to menu if the order is not found
         _id, uid, status, created_at, amt, shp = o
         if not o:
             print("Order not found.")
