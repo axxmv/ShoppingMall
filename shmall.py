@@ -538,7 +538,7 @@ class Customer(User):
         print(f"Tax: {tax_amount}")
         print(f"Total after Tax= {total_tax} ")
 
-        ptype = input("Pay by (credit/debit): ").strip().lower()
+        ptype = input("Pay by (Credit/debit). Please Enter: 'credit' or 'Debit': ").strip().lower()
         if ptype not in ("credit", "debit"):
             print("Invalid payment type.")
             return
@@ -728,6 +728,8 @@ class Customer(User):
                         self.ask_for_help()
                     elif option_2 == 2:
                         self.view_my_messages()
+                    elif option_2 == 3:
+                        break
                     else:
                         print("Invalid option. Please try again.")
                 
