@@ -563,7 +563,19 @@ class Customer(User):
         
 
     def remove_wishlist(self):
-        item_id = int(input("Enter item ID to remove from wishlist: ").strip())
+        item_id = input("Enter item ID to remove from wishlist: ").strip()
+
+        while not item_id.isdigit():
+            item_id = input("Enter item ID to remove from wishlist: ").strip()
+
+        item_id = int(item_id)
+
+##checks the order ID is valid
+
+        if item_id > 5 or item_id < 1:
+            print("No Item with that ID")
+            return
+
         cursor.execute("DELETE FROM wishlists WHERE user_id=%s AND item_id=%s;", (self.user_id, item_id))
         mydb.commit()
         #add condition
@@ -705,7 +717,13 @@ class Customer(User):
                     print("1. Message Staff")
                     print("2. View my messages")
                     print("3. Back")
-                    option_2 = int(input("Enter Option: "))
+                    option_2 = input("Enter Option: ")
+                    if not option_2.isdigit():
+                        option_2 = input("Enter Option: ")
+
+                    option_2 = int(option_2)
+
+
                     if option_2 == 1:
                         self.ask_for_help()
                     elif option_2 == 2:
