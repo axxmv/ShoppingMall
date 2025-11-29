@@ -6,7 +6,7 @@ import subprocess
 import platform
 import mysql.connector as mysql
 import random
-mydb=mysql.connect(host='localhost',user='root',passwd='Gothmikasa88')
+mydb=mysql.connect(host='localhost',user='root',passwd='MeghP169')
 cursor=mydb.cursor()
 
 
@@ -269,7 +269,7 @@ class Staff(User):
         print("** N to keep the original ** ")
         name_new= input("Enter the new Name : ")
         desc_new= input("Enter the new description : ")
-
+        
         while True:
             price_new = input("Enter new Price: ")
 
@@ -282,9 +282,7 @@ class Staff(User):
                 break
             except ValueError:
                 print("Invalid number. Enter a valid price or 'N' to keep original.")
-
-
-
+                
         sql = "UPDATE items SET name=%s, description=%s, price=%s WHERE id=%s;"
         cursor.execute(sql,(name_new, desc_new, price_new, id_))
         mydb.commit()
@@ -333,7 +331,7 @@ class Staff(User):
             print("  (empty)")
         else:
             for it in wl:
-                print(f"  {it['id']} | {it['name']} | ${float(it['price']):.2f}")
+                print(f"{it['id']} | {it['name']} | ${float(it['price']):.2f}")
 
                 
     def staff_message(self):
@@ -375,6 +373,7 @@ class Staff(User):
 
         run = True
         while run == True:
+            print("\n=== Staff Portal ===")
             print("1. View Inventory")
             print("2. Add Item ")
             print("3. Remove Item")
@@ -401,10 +400,10 @@ class Staff(User):
                 itemId = input("Enter the Item ID: ")
                 while not itemId.isdigit():
                     itemId = input("Enter the Item ID: ")
+
                 itemId = int(itemId)
 
                 description = input("Item Description: ")
-                price = input("price: ")
 
                 while True:
                     price = input("price: ")
@@ -419,6 +418,7 @@ class Staff(User):
                     stock = input("Amount in stock: ")
                 stock = int(stock)
 
+                
                 likeCounter = 0
 
                 self._addItemtoInventory(itemId, name, description, price, stock, likeCounter)
@@ -430,12 +430,11 @@ class Staff(User):
                 while not itemId.isdigit():
                     itemId = input("Enter the Item ID: ")
                 itemId = int(itemId)
-
                 self._removeItemfromInventory(itemId )
                 show_inventory()
 
             elif option == 4:
-
+                
                 itemId = input("Enter the Item ID: ")
 
                 while not itemId.isdigit():
@@ -452,6 +451,7 @@ class Staff(User):
                     continue  # return to staff menu
 
                 self._modifyIteminInventory(itemId)
+                
                 
             elif option == 5:
                 itemId = int(input("Enter the Item ID to update stocks: "))
@@ -868,6 +868,7 @@ class Ceo(User):
 
         
     def generate_monthly_report(self):
+        
         year = int(input("Enter year (YYYY): "))
         month = int(input("Enter month (1–12): "))
 
@@ -950,70 +951,93 @@ class Ceo(User):
             time.sleep(30)
 
     def view_reports(self):
-        cursor.execute("SELECT id, report_type, file_path, created_at FROM reports ORDER BY created_at DESC")
+        
+        while True:
+            rep= input("Enter the type of report you want to view (D)aily or (M)onthly  OR Go (B)ack : ").strip().lower()
+            if rep == "d":
+                tpe= "daily"
+                break
+            elif rep == "m":
+                tpe= "monthly"
+                break
+            elif rep == "b":
+                return
+            else:
+                print("Invalid input !! Try Again.")
+
+        cursor.execute(f"SELECT id, report_type, file_path, created_at FROM reports WHERE report_type ='{tpe}' ORDER BY created_at DESC ")
+                
         rows = cursor.fetchall()
 
         if not rows:
             print("\nNo reports found.")
             return
-
+        
         print("\n=== Reports List ===\n")
         for r in rows:
             rid, rtype, path, created = r
             print(f"[{rid}] {rtype.upper()} | Created: {created} | File: {path}")
 
-        choice = input("\nEnter report ID to view (or 0 to go back): ")
-
-        if not choice.isdigit() or int(choice) == 0:
-            return
-
-        report_id = int(choice)
-
-        cursor.execute("SELECT file_path FROM reports WHERE id=%s", (report_id,))
-        rp = cursor.fetchone()
-
-        if not rp:
-            print("Invalid report ID.")
-            return
-
-        file_path = rp[0]
-
-        if not os.path.exists(file_path):
-            print("Report file not found.")
-            return
-
-        print(f"\nOpening: {file_path}")
+        while True:
+            
+            choice = input("\nEnter report ID to view (or 0 to go back): ").strip()
+            
+            if choice == '0':
+                return
+            if not choice.isdigit() or int(choice) == 0:
+                print("Invalid input !! Try Again.")
+                continue
     
-        # Open file cross-platform
-        if platform.system() == "Darwin":       # macOS
-            subprocess.call(["open", file_path])
-        elif platform.system() == "Windows":
-            os.startfile(file_path)             # Windows only
-        else:                                   # Linux
-            subprocess.call(["xdg-open", file_path])
+            report_id = int(choice)
+            cursor.execute("SELECT file_path FROM reports WHERE id=%s AND report_type=%s", (report_id,tpe))
+            rp = cursor.fetchone()
+
+            if not rp:
+                print("Invalid report ID.")
+                continue
+
+            file_path = rp[0]
+
+            if not os.path.exists(file_path):
+                print("Report file not found.")
+                return
+
+            print(f"\nOpening: {file_path}")
+
+            if platform.system() == "Darwin":       # macOS
+                subprocess.call(["open", file_path])
+            elif platform.system() == "Windows":
+                os.startfile(file_path)             # Windows only
+            else:                                   # Linux
+                subprocess.call(["xdg-open", file_path])
     
     
     def ceoPortal(self):
         run = True
         while run == True:
+            print("\n=== CEO Portal ===")
             print("\n1. Generate Daily Reports")
             print("2. Generate Monthly Reports")
-            print("3. View Daily Report")
-            print("4. View Monthly Report")
-            print("5. Exit")
+            print("3. View Reports")
+            print("4. Exit")
 
-            choice = int(input("Enter choice: "))
+            try:
+                choice = int(input("Enter choice: "))
+            except ValueError:
+                print("Invalid input. Please enter a number from 1–4.")
+                continue
+            
             if choice == 1:
                 self.generate_daily_report()
-            if choice == 2:
+            elif choice == 2:
                 self.generate_monthly_report()
-            if choice == 3:
+            elif choice == 3:
                 self.view_reports()
-            if choice == 4:
-                continue
-            if choice == 5:
+            elif choice == 4:
                 run = False
                 return
+            else:
+                print("Invalid Input !! Try Again.")
 
 
     
