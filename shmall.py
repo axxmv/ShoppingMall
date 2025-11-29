@@ -6,7 +6,7 @@ import subprocess
 import platform
 import mysql.connector as mysql
 import random
-mydb=mysql.connect(host='localhost',user='root',passwd='Gothmikasa88')
+mydb=mysql.connect(host='localhost',user='root',passwd='MeghP169')
 cursor=mydb.cursor()
 
 
@@ -369,12 +369,19 @@ class Staff(User):
             print("7. Messages ")
             print("8. Exit")
 
-            option = int(input("\nEnter Option: "))
+            while True:
+                option = input("\nEnter Option: ")
+                if not option.isdigit():
+                    print("Invalid Input !! Please try again.\n")
+                else:
+                    break
+            option= int(option)
+    
 
             if option == 1:
                 show_inventory()
 
-            if option == 2:
+            elif option == 2:
                 name = input("Enter the Item name: ")
                 itemId = int(input("Enter the Item ID: "))
                 description = input("Item Description: ")
@@ -385,30 +392,32 @@ class Staff(User):
                 self._addItemtoInventory(itemId, name, description, price, stock, likeCounter)
                 show_inventory()
                 
-            if option == 3:
+            elif option == 3:
                 itemId = int(input("Enter the Item ID: "))
                 self._removeItemfromInventory(itemId )
                 show_inventory()
 
-            if option == 4:
+            elif option == 4:
                 itemId = int(input("Enter the Item ID: "))
                 self._modifyIteminInventory(itemId)
                 
                 
-            if option == 5:
+            elif option == 5:
                 itemId = int(input("Enter the Item ID to update stocks: "))
                 num= int(input("Enter the number of items to be added to stocks: "))#need to run a loop that stays on untill refilling is completed
                 self._refillInventory(itemId,num)
                 
-            if option ==6:
+            elif option ==6:
                 self.viewcustomerinfo()
             
-            if option == 7:
+            elif option == 7:
                 self.staff_message()
                 
-            if option == 8:
+            elif option == 8:
                 run = False
                 return
+            else: 
+                print("Invalid option !! Please try again.\n")
 
 
 
@@ -461,20 +470,27 @@ class Customer(User):
                     id_, name, desc, price, stock, like_count = info
                     print(f"\nID: {id_}, Name: {name}, Description: {desc or 'N/A'}")
                     print(f"Price: ${price}, Stock: {stock}, Likes: {like_count} ")
-                    action = input("\nWould you like to (L)ike, Add to (W)ishlist, or Go (B)ack? ")
-                    if action.upper() == 'L':
-                        cursor.execute("UPDATE items SET like_count = like_count + 1 WHERE id=%s;", (id_,))
-                        mydb.commit()
-                        print(f"You Liked {name}")
+                    while True:
+                        try:
+                            action = input("\nWould you like to (L)ike, Add to (W)ishlist, or Go (B)ack? ")
+                            if action.upper() == 'L':
+                                cursor.execute("UPDATE items SET like_count = like_count + 1 WHERE id=%s;", (id_,))
+                                mydb.commit()
+                                print(f"You Liked {name}")
+                                break
                         
-                    elif action.upper() == 'W':
-                        self. add_wishlist(id_)
-                        #need to add double adding of wishlist to
+                            elif action.upper() == 'W':
+                                self. add_wishlist(id_)
+                                break
+                                #need to add double adding of wishlist to
                 
-                    elif action.upper() == 'B':
-                        return
-                    else:
-                        print("Invalid choice.")
+                            elif action.upper() == 'B':
+                                return
+                            else:
+                                print("Invalid choice.")
+                        except ValueError:
+                            print("Please enter a valid item ID or 'b' to go back.")
+                                
             except ValueError:
                     print("Please enter a valid item ID or 'b' to go back.")
                 
@@ -566,6 +582,7 @@ class Customer(User):
         item_id = input("Enter item ID to remove from wishlist: ").strip()
 
         while not item_id.isdigit():
+            print("Invalid Input.")
             item_id = input("Enter item ID to remove from wishlist: ").strip()
 
         item_id = int(item_id)
@@ -671,11 +688,11 @@ class Customer(User):
         int(oid)
         cursor.execute("SELECT id, user_id, status, created_at, total_amount,shipping  FROM orders WHERE id=%s; ", (oid,))
         o = cursor.fetchone()
-#######
+        
         if o is None:
             print("Order not found.")
             return
-####### go back to menu if the order is not found
+        
         _id, uid, status, created_at, amt, shp = o
         if not o:
             print("Order not found.")
@@ -717,9 +734,13 @@ class Customer(User):
                     print("1. Message Staff")
                     print("2. View my messages")
                     print("3. Back")
-                    option_2 = input("Enter Option: ")
-                    if not option_2.isdigit():
+
+                    while True:
                         option_2 = input("Enter Option: ")
+                        if not option_2.isdigit():
+                            print ("Invalid option.!! Please try again.\n")
+                        else:
+                            break
 
                     option_2 = int(option_2)
 
@@ -731,7 +752,7 @@ class Customer(User):
                     elif option_2 == 3:
                         break
                     else:
-                        print("Invalid option. Please try again.")
+                        print("Invalid option.!! Please try again.")
                 
             elif option == 5:
                 run = False
@@ -992,9 +1013,6 @@ def register():
 
     print("__________Registration__________ ")
     ###########################################
-
-
-
 
 
 
