@@ -243,7 +243,7 @@ class User:
     def __init__(self, name):
         self.name = name
 
-        
+
 class Staff(User):
     def __init__(self, name, staffID):
         super().__init__(name)
@@ -269,7 +269,7 @@ class Staff(User):
         print("** N to keep the original ** ")
         name_new= input("Enter the new Name : ")
         desc_new= input("Enter the new description : ")
-        
+
         while True:
             price_new = input("Enter new Price: ")
 
@@ -282,7 +282,9 @@ class Staff(User):
                 break
             except ValueError:
                 print("Invalid number. Enter a valid price or 'N' to keep original.")
-                
+
+
+
         sql = "UPDATE items SET name=%s, description=%s, price=%s WHERE id=%s;"
         cursor.execute(sql,(name_new, desc_new, price_new, id_))
         mydb.commit()
@@ -331,7 +333,7 @@ class Staff(User):
             print("  (empty)")
         else:
             for it in wl:
-                print(f"{it['id']} | {it['name']} | ${float(it['price']):.2f}")
+                print(f"  {it['id']} | {it['name']} | ${float(it['price']):.2f}")
 
                 
     def staff_message(self):
@@ -354,7 +356,11 @@ class Staff(User):
         answer = ask_yes_no("Want to reply any message")
         while answer:
             
-            mid = int(input("Enter message ID to reply: ").strip())
+            mid = input("Enter message ID to reply: ").strip()
+            while not mid.isdigit():
+                mid = input("Enter valid message ID to reply: ").strip()
+            mid = int(mid)
+
             reply = input("Reply: ").strip()
             cursor.execute("SELECT customer_id FROM messages WHERE id=%s ;", (mid,))
             orig = cursor.fetchone()
@@ -373,7 +379,6 @@ class Staff(User):
 
         run = True
         while run == True:
-            print("\n=== Staff Portal ===")
             print("1. View Inventory")
             print("2. Add Item ")
             print("3. Remove Item")
@@ -396,45 +401,61 @@ class Staff(User):
                 show_inventory()
 
             elif option == 2:
-                name = input("Enter the Item name: ")
-                itemId = input("Enter the Item ID: ")
-                while not itemId.isdigit():
-                    itemId = input("Enter the Item ID: ")
 
-                itemId = int(itemId)
+
+                name = input("Enter the Item name: ")
+
+                # Loop until user enters a valid numeric and unique ID
+                while True:
+                    itemId = input("Enter the Item ID: ")
+                    if not itemId.isdigit():
+                        print("ID must be a number.")
+                        continue
+                    itemId = int(itemId)
+                    cursor.execute("SELECT 1 FROM items WHERE id=%s;", (itemId,))
+                    if cursor.fetchone():
+                        print("An item with this ID already exists. Please enter a different ID.")
+                        continue
+                    break  # valid and unique ID, exit loop
 
                 description = input("Item Description: ")
+                price = input("price: ")
 
                 while True:
-                    price = input("price: ")
                     try:
                         price = float(price)
-                        break  # valid float → exit loop
+                        break
                     except ValueError:
-                        print("Enter a valid number.")
+                        price = input("Enter a valid number for price: ")
 
                 stock = input("Amount in stock: ")
                 while not stock.isdigit():
                     stock = input("Amount in stock: ")
                 stock = int(stock)
 
-                
                 likeCounter = 0
 
                 self._addItemtoInventory(itemId, name, description, price, stock, likeCounter)
                 show_inventory()
-                
+
+
+
+
+
+
+
             elif option == 3:
                 itemId = input("Enter the Item ID: ")
 
                 while not itemId.isdigit():
                     itemId = input("Enter the Item ID: ")
                 itemId = int(itemId)
+
                 self._removeItemfromInventory(itemId )
                 show_inventory()
 
             elif option == 4:
-                
+
                 itemId = input("Enter the Item ID: ")
 
                 while not itemId.isdigit():
@@ -452,12 +473,39 @@ class Staff(User):
 
                 self._modifyIteminInventory(itemId)
                 
-                
             elif option == 5:
-                itemId = int(input("Enter the Item ID to update stocks: "))
-                num= int(input("Enter the number of items to be added to stocks: "))#need to run a loop that stays on untill refilling is completed
-                self._refillInventory(itemId,num)
-                
+
+
+
+                itemId = input("Enter the Item ID to update stocks: ")
+                while not itemId.isdigit():
+                    itemId = input("Enter a valid Item ID: ")
+                itemId = int(itemId)
+
+
+                cursor.execute("SELECT 1 FROM items WHERE id=%s;", (itemId,))
+                exists = cursor.fetchone()
+
+                if not exists:
+                    print("\n No item exists with that ID.\n")
+                    continue
+
+
+                while True:
+                    num = input("Enter the number of items to add to stock: ")
+                    if num.isdigit():
+                        num = int(num)
+                        break
+                    else:
+                        print("Please enter a valid number.")
+
+
+                self._refillInventory(itemId, num)
+                print("\nInventory Updated\n")
+
+
+
+
             elif option ==6:
                 self.viewcustomerinfo()
             
