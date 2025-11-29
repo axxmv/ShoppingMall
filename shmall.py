@@ -333,7 +333,7 @@ class Staff(User):
             print("  (empty)")
         else:
             for it in wl:
-                print(f"  {it['id']} | {it['name']} | ${float(it['price']):.2f}")
+                print(it)
 
                 
     def staff_message(self):
