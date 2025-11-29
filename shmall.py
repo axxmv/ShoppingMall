@@ -269,7 +269,22 @@ class Staff(User):
         print("** N to keep the original ** ")
         name_new= input("Enter the new Name : ")
         desc_new= input("Enter the new description : ")
-        price_new= float(input("Enter New Price : "))
+
+        while True:
+            price_new = input("Enter new Price: ")
+
+            if price_new.upper() == "N":
+                price_new = price
+                break
+
+            try:
+                price_new = float(price_new)
+                break
+            except ValueError:
+                print("Invalid number. Enter a valid price or 'N' to keep original.")
+
+
+
         sql = "UPDATE items SET name=%s, description=%s, price=%s WHERE id=%s;"
         cursor.execute(sql,(name_new, desc_new, price_new, id_))
         mydb.commit()
@@ -410,14 +425,33 @@ class Staff(User):
                 show_inventory()
                 
             elif option == 3:
-                itemId = int(input("Enter the Item ID: "))
+                itemId = input("Enter the Item ID: ")
+
+                while not itemId.isdigit():
+                    itemId = input("Enter the Item ID: ")
+                itemId = int(itemId)
+
                 self._removeItemfromInventory(itemId )
                 show_inventory()
 
             elif option == 4:
-                itemId = int(input("Enter the Item ID: "))
+
+                itemId = input("Enter the Item ID: ")
+
+                while not itemId.isdigit():
+                    itemId = input("Enter the Item ID: ")
+
+                itemId = int(itemId)
+
+                # Check if item exists BEFORE calling modify
+                cursor.execute("SELECT 1 FROM items WHERE id=%s;", (itemId,))
+                exists = cursor.fetchone()
+
+                if not exists:
+                    print("No item exists with that ID.")
+                    continue  # return to staff menu
+
                 self._modifyIteminInventory(itemId)
-                
                 
             elif option == 5:
                 itemId = int(input("Enter the Item ID to update stocks: "))
