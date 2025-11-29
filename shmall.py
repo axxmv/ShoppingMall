@@ -6,7 +6,7 @@ import subprocess
 import platform
 import mysql.connector as mysql
 import random
-mydb=mysql.connect(host='localhost',user='root',passwd='MeghP169')
+mydb=mysql.connect(host='localhost',user='root',passwd='Gothmikasa88')
 cursor=mydb.cursor()
 
 
@@ -383,10 +383,27 @@ class Staff(User):
 
             elif option == 2:
                 name = input("Enter the Item name: ")
-                itemId = int(input("Enter the Item ID: "))
+                itemId = input("Enter the Item ID: ")
+                while not itemId.isdigit():
+                    itemId = input("Enter the Item ID: ")
+                itemId = int(itemId)
+
                 description = input("Item Description: ")
-                price = float(input("price: "))
-                stock = int(input("Amount in stock: "))
+                price = input("price: ")
+
+                while True:
+                    price = input("price: ")
+                    try:
+                        price = float(price)
+                        break  # valid float → exit loop
+                    except ValueError:
+                        print("Enter a valid number.")
+
+                stock = input("Amount in stock: ")
+                while not stock.isdigit():
+                    stock = input("Amount in stock: ")
+                stock = int(stock)
+
                 likeCounter = 0
 
                 self._addItemtoInventory(itemId, name, description, price, stock, likeCounter)
