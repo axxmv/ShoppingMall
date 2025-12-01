@@ -6,7 +6,7 @@ import subprocess
 import platform
 import mysql.connector as mysql
 import random
-mydb=mysql.connect(host='localhost',user='root',passwd='MeghP169')
+mydb=mysql.connect(host='localhost',user='root',passwd='Gothmikasa88')
 cursor=mydb.cursor()
 
 
@@ -917,8 +917,17 @@ class Ceo(User):
         
     def generate_monthly_report(self):
         
-        year = int(input("Enter year (YYYY): "))
-        month = int(input("Enter month (1–12): "))
+        year = input("Enter year (YYYY): ")
+        while not year.isdigit():
+            year = input("Enter year (YYYY): ")
+        year = int(year)
+
+        month = input("Enter month (1–12): ")
+        while not month.isdigit():
+            month = input("Enter month (1–12): ")
+        month = int(month)
+
+
 
         start_date = datetime.date(year, month, 1)
         if month == 12:
