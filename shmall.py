@@ -227,7 +227,7 @@ def show_inventory():
         for item in inventry:
             id_, name, desc, price, stock, like_count = item
             print(f"ID: {id_}, Name: {name}")
-            print("-" * 40)  # separator line
+            print("-" * 40)  
 
     
 
@@ -249,7 +249,7 @@ class Staff(User):
     def _removeItemfromInventory(self, itemId):
         cursor.execute("DELETE FROM items WHERE id=%s;", (itemId,))
         mydb.commit()
-        print('item deleted')
+        print('Item deleted')
 
     def _modifyIteminInventory(self, itemId):
         cursor.execute("SELECT * FROM items WHERE id=%s;", (itemId,))
@@ -258,17 +258,22 @@ class Staff(User):
         print("Original Item Info")
         print(f"ID: {id_}, Name: {name}, Description: {desc or 'N/A'}")
         print(f"Price: ${price}, Stock: {stock}, Likes: {like_count} ")
-        print("** N to keep the original ** ")
-        name_new= input("Enter the new Name : ")
-        desc_new= input("Enter the new description : ")
+        print("\n** N keep the original ** ")
+
 
         while True:
-            price_new = input("Enter new Price: ")
+            name_new= input("Enter the new Name : ").strip().upper()
+            desc_new= input("Enter the new description : ").strip().upper()
+            price_new = input("Enter new Price: ").strip().upper()
 
-            if price_new.upper() == "N":
+            if price_new =="N" :
                 price_new = price
-                break
-
+            if name_new == "N":
+                name_new = name
+            if desc_new == "N":
+                desc_new = desc
+                
+                
             try:
                 price_new = float(price_new)
                 break
@@ -283,10 +288,9 @@ class Staff(User):
         cursor.execute("SELECT * FROM items WHERE id=%s;", (itemId,))
         info= cursor.fetchone()
         id_, name, desc, price, stock, like_count = info
-        print("Updated Item Info")
+        print("\nUpdated Item Info")
         print(f"ID: {id_}, Name: {name}, Description: {desc or 'N/A'}")
         print(f"Price: ${price}, Stock: {stock}, Likes: {like_count} ")
-        print("** N to keep the original ** ")
         
     def _refillInventory(self, itemId, num):
         cursor.execute("SELECT stock FROM items WHERE id=%s;", (itemId,))
@@ -314,6 +318,13 @@ class Staff(User):
             for o in orders:
                 id_, amt, status,created_at, shp = o
                 print(f"  Order #{id_} | ${float(amt):.2f} | {status} | {created_at} | {shp}")
+                cur=mydb.cursor()
+                cur.execute(f"SELECT card_type, last4 from payments WHERE order_id ={id_}")
+                row=cur.fetchone()
+                ct,l4=row
+                print(f"  Payment type : {ct}   |   Last 4 of the card : {l4}\n")
+                cur.close()
+                
         cursor.execute("""
             SELECT i.id, i.name, i.price FROM wishlists w
             JOIN items i ON i.id=w.item_id
@@ -327,6 +338,7 @@ class Staff(User):
             for it in wl:
                 print(it)
 
+        cursor.execute("SELECT id, total_amount, status, created_at, shipping FROM orders WHERE user_id=%s ORDER BY created_at DESC;", (_id,))
                 
     def staff_message(self):
         cursor.execute("""
@@ -367,10 +379,11 @@ class Staff(User):
             answer = ask_yes_no("Want to reply any message")
                 
 
-    def staffPortal(self, inv):
+    def staffPortal(self):
 
         run = True
         while run == True:
+            print("\n=== STAFF Portal ===")
             print("1. View Inventory")
             print("2. Add Item ")
             print("3. Remove Item")
@@ -393,7 +406,6 @@ class Staff(User):
                 show_inventory()
 
             elif option == 2:
-
 
                 name = input("Enter the Item name: ")
 
@@ -428,6 +440,7 @@ class Staff(User):
                 likeCounter = 0
 
                 self._addItemtoInventory(itemId, name, description, price, stock, likeCounter)
+                print("\n Item Added to the inventory\n")
                 show_inventory()
 
 
@@ -523,22 +536,35 @@ class Customer(User):
         self.email = email
 
     def add_wishlist(self, item_id):
-        
+        cursor.execute(f"SELECT quantity from wishlists WHERE user_id= '{self.user_id}' AND item_id={item_id}")
+        row=cursor.fetchone()
+        qt=0
+        if row:
+            qt,=row
+            print(f"The item with quantity: {qt} already exists in your wishlist.!!!")
+            ques = ask_yes_no("\nWant to add more ?")
+            if not ques:
+                return
         # ensure in stock
         cursor.execute("SELECT stock FROM items WHERE id=%s;", (item_id,))
         row = cursor.fetchone()
+        st,=row
         if not row:
             print("Item not found.")
         elif int(row[0]) <= 0:
             print("This item is out of stock and cannot be added to your wishlist.")
         else:
             quantity= int(input("Enter number of items to add: "))
-            cursor.execute("INSERT IGNORE INTO wishlists (user_id, item_id, quantity) VALUES (%s,%s,%s);", (self.user_id, item_id,quantity), quantity)
-            mydb.commit()
-            print("Added to wishlist.")
+            qt+=quantity
+            if qt > int(st):
+                print("You cannot add items more than they are in stock")
+            else:
+                cursor.execute("INSERT IGNORE INTO wishlists (user_id, item_id, quantity) VALUES (%s,%s,%s);", (self.user_id, item_id,qt), qt)
+                mydb.commit()
+                print("Added to wishlist.")
 
-    #I'm adding this for the browsing and interacting with items part (Vincent)
-    def browseItems(self, inv):
+
+    def browseItems(self):
         
         show_inventory()
 
@@ -573,7 +599,7 @@ class Customer(User):
                             elif action.upper() == 'W':
                                 self. add_wishlist(id_)
                                 break
-                                #need to add double adding of wishlist to
+ 
                 
                             elif action.upper() == 'B':
                                 return
@@ -584,6 +610,7 @@ class Customer(User):
                                 
             except ValueError:
                     print("Please enter a valid item ID or 'b' to go back.")
+
                 
     def print_receipt(self, order_id, lines, total, payment_type, last4):
         """
@@ -677,11 +704,11 @@ class Customer(User):
             item_id = input("Enter item ID to remove from wishlist: ").strip()
 
         item_id = int(item_id)
-
-##checks the order ID is valid
-
-        if item_id > 5 or item_id < 1:
-            print("No Item with that ID")
+        
+        cursor.execute("SELECT * FROM wishlists WHERE user_id=%s AND item_id=%s;", (self.user_id, item_id)) 
+        row=cursor.fetchall()
+        if not row :
+            print("No such item in wishlist.")
             return
 
         cursor.execute("DELETE FROM wishlists WHERE user_id=%s AND item_id=%s;", (self.user_id, item_id))
@@ -758,7 +785,6 @@ class Customer(User):
 
         print("\n--- Your Messages & Replies ---\n")
         for r in rows:
-            # r is a tuple: (id, message, reply, status, created_at, replied_at)
             mid,msg,rep,status,created_at,replied_at = r
 
             print(f"ID: {mid} | Status: {status} | Sent: {created_at}")
@@ -795,7 +821,7 @@ class Customer(User):
         print(f"\nOrder #{_id} | Status: {status} | Total: ${float(amt):.2f} | Placed: {created_at} | Tracking info: {shp}")
 
             
-    def customerPortal(self, inv):
+    def customerPortal(self):
         run = True
         while run == True:
             print("\n=== Customer Portal ===")
@@ -809,11 +835,11 @@ class Customer(User):
                 option = int(input("Enter Option: "))
             except ValueError:
                 print("Invalid input. Please enter a number from 1–5.")
-                continue  # restart menu
+                continue  
 
 
             if option == 1:
-                self.browseItems(inv )
+                self.browseItems()
             elif option == 2:
                 self.viewWishlist()
             elif option == 3:
@@ -1089,53 +1115,11 @@ class Ceo(User):
                 print("Invalid Input !! Try Again.")
 
 
-    
-
-class Inventory:
-    
-    seed_items_if_empty()
-    
-    
-    def __str__(self):
-        if not self.inventoryList:
-            return "Inventory is empty."
-        return "\n".join([f" {item.name}" for item in self.inventoryList]) # "\n".join([str(item) for item in self.inventoryList]) to print details
-
-
-    def _addItemtoInventory(self, itemId, name, description, price, stock, likeCounter): #creates the item and adds it to inventory at the sane time
-        sql = "INSERT INTO items (id,name, description, price, stock, like_count) VALUES (%s, %s, %s, %s,%s,%s);"
-        cursor.execute(sql,(itemId,name,description,price,stock,likeCounter))
-        mydb.commit()
-
-    def _removeItemfromInventory(self, itemId):
-        cursor.execute("DELETE FROM items WHERE id=%s;", (itemId,))
-        mydb.commit()
-        print('item deleted')
-
-    def _modifyIteminInventory(self, itemId):
-        cursor.execute("SELECT * FROM items WHERE id=%s;", (itemId,))
-        info= cursor.fetchone()
-        id_, name, desc, price, stock, like_count = info
-        print("Original iItem Info")
-        print(f"ID: {id_}, Name: {name}, Description: {desc or 'N/A'}")
-        print(f"Price: ${price}, Stock: {stock}, Likes: {like_count} ")
-        print("** N to keep the original ** ")
-        name_new= input("Enter the new Name : ")
-        desc_new= input("Enter the new description : ")
-        price_new= float(input("Enter New Price : "))
-        sql = "UPDATE items SET name=%s, description=%s, price=%s WHERE id=%s;"
-        cursor.execute(sql,(name_new, desc_new, price_new, id_))
-        mydb.commit()
-                
-        
-
-
-
                  
 
 def register():
 
-    print("__________Registration__________ ")
+    print("\n_________Registration__________ ")
 
 
     username = input("Username: ")
@@ -1147,7 +1131,7 @@ def register():
     row=cursor.fetchone()
     if row:
         print("Username or Email already exists.")
-        return
+        return False
     
     print("Choose Account Type: 1. Staff  2. Customer")
     accountType = input("New Account Type: ")
@@ -1205,7 +1189,7 @@ def ask_yes_no(prompt):
 
 
 def login():
-    print("________Log In________")
+    print("\n________Log In________")
     username = input("Enter your Username: ")
     
     sql = "SELECT * FROM users WHERE username=%s;"
@@ -1216,8 +1200,8 @@ def login():
         return False
     else:
         password = input("Enter your Password: ")
-        sql = "SELECT * FROM users WHERE password_hash=%s;"
-        cursor.execute(sql, (password,))
+        sql = "SELECT * FROM users WHERE password_hash=%s AND username=%s;"
+        cursor.execute(sql, (password,username))
         pw = cursor.fetchone()
         if not pw:
             print("Invalid Password. Try Again.")
@@ -1238,12 +1222,13 @@ def login():
 
 
 def main():
-    inv=Inventory()
+    #inv=Inventory()
+    seed_items_if_empty()
     add_default_ceo_if_missing()
 
 
     while True:
-        print("Welcome to the Shopping Mall")
+        print("\nWelcome to the Shopping Mall")
         print("_____________________________")
         print("\n")
         has_account = ask_yes_no("Do you have an account?")
@@ -1251,22 +1236,24 @@ def main():
         if has_account:
             pass  #skips to login below
         else:
-            success = register()
-            if success:
-                print("User Registered")
-            else:
-                print("Registration failed")
-                try_again = ask_yes_no("Try registering again?")
-                # if false it'll restart main menu
-                if not try_again:
-                    continue
+            while True:
+                success = register()
+                if success:
+                    print("User Registered")
+                    break
+                else:
+                    print("Registration failed")
+                    try_again = ask_yes_no("Try registering again?")
+                    if not try_again :
+                        break
+
 
 
         max_attempts = 4
         attempts = 0
         currentUser = None
-
-        while not currentUser and attempts < max_attempts: #currentUser not always defined?
+ 
+        while not currentUser and attempts < max_attempts: 
             currentUser = login()
 
             if currentUser:
@@ -1289,7 +1276,8 @@ def main():
                     if currentUser:
                         break
                 else:
-                    print("Registration failed. Please try again later.\n")
+                    print("Registration failed. Plea  se try again later.\n")
+                    
             else:
                 retry = ask_yes_no("Try logging in again?")
                 if not retry:
@@ -1300,50 +1288,45 @@ def main():
             if not currentUser:
                 continue  #if there isnt a currentUser just return to the top
 
-
-
-
-            # print(f"\nLogged in as {currentUser.name} ({currentUser.__class__.__name__})\n") #this will happen if a currentUser is recognized
-
+        
         if isinstance(currentUser, Staff):
-            print("\nStaff Portal")
-            currentUser.staffPortal(inv)
+            print("\n")
+            currentUser.staffPortal()
             condition = input("Would you like to log out? Y or N: ")
 
             while condition.upper() == "N":
-                currentUser.staffPortal(inv)
-                condition = input("Would you like to log out? Y or N: ")
+                currentUser.staffPortal()
+                condition = input("\nWould you like to log out? Y or N: ")
             del currentUser
-            continue
 
         elif isinstance(currentUser, Customer):
             print("\n")
-            currentUser.customerPortal(inv)
+            currentUser.customerPortal()
             x = input("Would you like to log out? Y or N: ")
 
             while x.upper() == "N":
-                currentUser.customerPortal(inv)
-                x = input("Would you like to log out? Y or N: ")
+                currentUser.customerPortal()
+                x = input("\nWould you like to log out? Y or N: ")
             del currentUser
-            continue
 
 
         elif isinstance(currentUser, Ceo):
-            print("View Reports")
+            print("\n")
             currentUser.ceoPortal()
             y = input("Would you like to log out? Y or N: ")
+            
 
             while y.upper() == "N":
                 currentUser.ceoPortal()
-                y = input("Would you like to log out? Y or N: ")
+                y = input("\nWould you like to log out? Y or N: ")
             del currentUser
-            continue
+            
 
 
 
-        back_to_menu = ask_yes_no("Return to main menu?") #ask if logged out user wnats to go back to main menu
+        back_to_menu = ask_yes_no("\nReturn to main menu?") #ask if logged out user wnats to go back to main menu
         if not back_to_menu:
-            print("Goodbye!")
+            print("\nGoodbye!")
             break  #exit outer loop
 
 
