@@ -1185,6 +1185,17 @@ def register():
     if accountType == 2:
         role = "customer"
         customer_id = get_unique_random_id()
+##check if the name exists
+        cursor.execute("SELECT 1 FROM users WHERE username=%s", (username,))
+        if cursor.fetchone():
+            print("Username already taken, please choose another.")
+            return False
+
+        cursor.execute("SELECT 1 FROM users WHERE email=%s", (email,))
+        if cursor.fetchone():
+            print("Email already registered, please use another one.")
+            return False
+##
         cursor.execute("INSERT INTO users values('{}','{}','{}','{}','{}','{}') ".format(customer_id,username,name,email,password,role))
         mydb.commit()
         return True
