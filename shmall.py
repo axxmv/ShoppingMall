@@ -6,7 +6,7 @@ import subprocess
 import platform
 import mysql.connector as mysql
 import random
-mydb=mysql.connect(host='localhost',user='root',passwd='Gothmikasa88')
+mydb=mysql.connect(host='localhost',user='root',passwd='MeghP169')
 cursor=mydb.cursor()
 
 
@@ -97,6 +97,8 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS reports (
 );""")
 
 
+#adding default ceo
+
 def add_default_ceo_if_missing():
     # Check if CEO already exists
     cursor.execute("SELECT COUNT(*) FROM users WHERE role='ceo';")
@@ -104,15 +106,13 @@ def add_default_ceo_if_missing():
 
     if count == 0:
 
-        # Default credentials (you can change them)
         ceo_id= 7989
         ceo_username = "admin_ceo"
         ceo_name= "Mr Troy"
         ceo_email = "ceo@shoppingmall.com"
-        ceo_password = "ceo1234"       # store plain or hashed depending on your system
+        ceo_password = "ceo1234"       
         ceo_role = "ceo"
 
-        # Insert CEO
         cursor.execute("""
             INSERT INTO users (id,username,name, email, password_hash, role)
             VALUES (%s, %s, %s, %s,%s,%s);
@@ -132,7 +132,7 @@ def get_unique_random_id():
         if not cursor.fetchone():
             return rid
 
-
+# few items thatv already exists when system is created for the first time
 STARTER_ITEMS = [
     ("Wireless Mouse", "Ergonomic 2.4 GHz wireless mouse", 19.99, 25),
     ("Mechanical Keyboard", "RGB backlit mechanical keyboard", 59.99, 10),
@@ -147,7 +147,7 @@ def seed_items_if_empty():
         cursor.execute("SELECT COUNT(*) FROM items;")
         (cnt,) = cursor.fetchone()
         if cnt and cnt > 0:
-            return  # already seeded
+            return  
 
         # Insert starter items
         cursor.executemany(
@@ -161,12 +161,7 @@ def seed_items_if_empty():
 
 
 def validate_card_details(card_number, exp_date, cvv, card_type):
-    """
-    Simple local validation for card number, expiry and CVV.
-    This does NOT contact any real payment gateway.
-    """
 
-    # Normalize
     card_number = card_number.replace(" ", "")
     card_type = card_type.lower().strip()
 
@@ -179,10 +174,8 @@ def validate_card_details(card_number, exp_date, cvv, card_type):
         print("Card number length is invalid.")
         return False
 
-    # Very basic type hint (optional)
+    
     if card_type == "credit" or card_type == "debit":
-        # Example: you can enforce Visa starts with 4, MasterCard 5, etc.
-        # For now we just accept any prefix to keep it simple.
         pass
 
     # 2) Expiry date: expected format mm/yyyy
@@ -218,7 +211,6 @@ def validate_card_details(card_number, exp_date, cvv, card_type):
         print("CVV must be 3 or 4 digits.")
         return False
 
-    # Passed all simple checks
     return True
 
 
@@ -1144,15 +1136,19 @@ class Inventory:
 def register():
 
     print("__________Registration__________ ")
-    ###########################################
-
 
 
     username = input("Username: ")
     name= input("Name: ")
     email= input("Email: ")
-    password = input("Password: ") #reenter password
+    password = input("Password: ")
 
+    cursor.execute(f"SELECT * from users WHERE username='{username}' OR email='{email}'")
+    row=cursor.fetchone()
+    if row:
+        print("Username or Email already exists.")
+        return
+    
     print("Choose Account Type: 1. Staff  2. Customer")
     accountType = input("New Account Type: ")
 
@@ -1163,6 +1159,7 @@ def register():
     accountType = int(accountType)
 
 
+ 
 
     if accountType == 1:
         code = input("Enter Staff Account Code: ")
@@ -1185,17 +1182,6 @@ def register():
     if accountType == 2:
         role = "customer"
         customer_id = get_unique_random_id()
-##check if the name exists
-        cursor.execute("SELECT 1 FROM users WHERE username=%s", (username,))
-        if cursor.fetchone():
-            print("Username already taken, please choose another.")
-            return False
-
-        cursor.execute("SELECT 1 FROM users WHERE email=%s", (email,))
-        if cursor.fetchone():
-            print("Email already registered, please use another one.")
-            return False
-##
         cursor.execute("INSERT INTO users values('{}','{}','{}','{}','{}','{}') ".format(customer_id,username,name,email,password,role))
         mydb.commit()
         return True
