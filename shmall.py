@@ -918,12 +918,12 @@ class Ceo(User):
     def generate_monthly_report(self):
         
         year = input("Enter year (YYYY): ")
-        while not year.isdigit():
+        while not year.isdigit() or not (1 <= int(year) <= 9999):
             year = input("Enter year (YYYY): ")
         year = int(year)
 
         month = input("Enter month (1–12): ")
-        while not month.isdigit():
+        while not month.isdigit() or not (1 <= int(month) <= 12):
             month = input("Enter month (1–12): ")
         month = int(month)
 
