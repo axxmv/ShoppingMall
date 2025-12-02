@@ -258,13 +258,15 @@ class Staff(User):
         print("Original Item Info")
         print(f"ID: {id_}, Name: {name}, Description: {desc or 'N/A'}")
         print(f"Price: ${price}, Stock: {stock}, Likes: {like_count} ")
-        print("\n** N keep the original ** ")
+        print("\n** N to keep the original ** ")
 
 
         while True:
             name_new= input("Enter the new Name : ").strip().upper()
             desc_new= input("Enter the new description : ").strip().upper()
             price_new = input("Enter new Price: ").strip().upper()
+            
+
 
             if price_new =="N" :
                 price_new = price
@@ -279,8 +281,12 @@ class Staff(User):
                 break
             except ValueError:
                 print("Invalid number. Enter a valid price or 'N' to keep original.")
-
-
+        
+        cursor.execute(f"SELECT id FROM items WHERE name='{name_new}' and id!={itemId};")
+        row=cursor.fetchone()
+        if row:
+            print("Item with this name already exists. Please enter a different name.")
+            return
 
         sql = "UPDATE items SET name=%s, description=%s, price=%s WHERE id=%s;"
         cursor.execute(sql,(name_new, desc_new, price_new, id_))
@@ -293,6 +299,7 @@ class Staff(User):
         print(f"Price: ${price}, Stock: {stock}, Likes: {like_count} ")
         
     def _refillInventory(self, itemId, num):
+
         cursor.execute("SELECT stock FROM items WHERE id=%s;", (itemId,))
         info= cursor.fetchone()
         addon= num + info[0]
@@ -330,23 +337,32 @@ class Staff(User):
             JOIN items i ON i.id=w.item_id
             WHERE w.user_id=%s ORDER BY i.name;
         """, (_id,))
-        wl = cursor.fetchall()
         print("\nWishlist:")
-        if not wl:
+        
+        rows = cursor.fetchall()  # [FIX] consume **all** rows so nothing is left unread
+        if not rows:
             print("  (empty)")
         else:
-            for it in wl:
-                print(it)
-
-        cursor.execute("SELECT id, total_amount, status, created_at, shipping FROM orders WHERE user_id=%s ORDER BY created_at DESC;", (_id,))
+            for it in rows:
+                item_id, name, price = it
+                print(f"  {item_id} | {name} | ${float(price):.2f}")
+        
                 
     def staff_message(self):
-        cursor.execute("""
+        
+        cur=mydb.cursor()
+        try:
+            cur.fetchall()
+        except Exception:
+            pass
+        
+        cur.execute("""
             SELECT m.id, u.username AS from_user, m.message, m.created_at
             FROM messages m JOIN users u ON u.id=m.customer_id
             AND m.status='unread' ORDER BY m.created_at ASC;
             """)
-        msgs = cursor.fetchall()
+        
+        msgs = cur.fetchall()
 
         if not msgs:
             print("\nNo new messages.")
@@ -366,15 +382,16 @@ class Staff(User):
             mid = int(mid)
 
             reply = input("Reply: ").strip()
-            cursor.execute("SELECT customer_id FROM messages WHERE id=%s ;", (mid,))
-            orig = cursor.fetchone()
+            cur.execute("SELECT customer_id FROM messages WHERE id=%s ;", (mid,))
+            orig = cur.fetchone()
             cus_id=orig
             if not orig:
                 print("Message not found or not addressed to you.")
                 return
             
-            cursor.execute("UPDATE messages SET status='read',reply=%s,replied_at = NOW() WHERE id=%s;", (reply,mid))
+            cur.execute("UPDATE messages SET status='read',reply=%s,replied_at = NOW() WHERE id=%s;", (reply,mid))
             mydb.commit()
+            cur.close()
             print("Reply sent & original marked read.")
             answer = ask_yes_no("Want to reply any message")
                 
@@ -407,7 +424,15 @@ class Staff(User):
 
             elif option == 2:
 
-                name = input("Enter the Item name: ")
+                while True:
+                    name = input("Enter the Item name: ")
+                    cursor.execute(f"SELECT id FROM items WHERE name='{name}';")
+                    row=cursor.fetchone()
+                    if row:
+                        print("Item with this name already exists. Please enter a different name.")
+                        continue
+                    else:
+                        break
 
                 # Loop until user enters a valid numeric and unique ID
                 while True:
@@ -423,7 +448,7 @@ class Staff(User):
                     break  # valid and unique ID, exit loop
 
                 description = input("Item Description: ")
-                price = input("price: ")
+                price = input("Price: ")
 
                 while True:
                     try:
@@ -486,7 +511,7 @@ class Staff(User):
                 while not itemId.isdigit():
                     itemId = input("Enter a valid Item ID: ")
                 itemId = int(itemId)
-
+                
 
                 cursor.execute("SELECT 1 FROM items WHERE id=%s;", (itemId,))
                 exists = cursor.fetchone()
@@ -494,7 +519,11 @@ class Staff(User):
                 if not exists:
                     print("\n No item exists with that ID.\n")
                     continue
-
+                
+                cursor.execute("SELECT stock FROM items WHERE id=%s;", (itemId,))
+                info= cursor.fetchone()
+                stk, = info
+                print(f"Original Stocks : {stk}")
 
                 while True:
                     num = input("Enter the number of items to add to stock: ")
@@ -646,7 +675,7 @@ class Customer(User):
             else:
                 item_name = f"Item {item_id}"
 
-            print(f"{item_name} x{qty} @ ${price:.2f} = ${line_total:.2f}")
+            print(f"{item_name} x {qty} @ ${price:.2f} = ${line_total:.2f}")
 
         print("----------------------------")
         print(f"Subtotal: ${subtotal:.2f}")
@@ -662,7 +691,7 @@ class Customer(User):
     
     def initiateCheckout(self,total,lines):
         
-        print("=========Checkout==========")
+        print("\n=========Checkout==========")
         
         tax=10/100 # can change tax from here
         tax_amount=float(total)*(tax)
@@ -832,7 +861,7 @@ class Customer(User):
             print("5. Exit")
 
             try:
-                option = int(input("Enter Option: "))
+                option = int(input("\nEnter Option: "))
             except ValueError:
                 print("Invalid input. Please enter a number from 1–5.")
                 continue  
